@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
     <title>Trading Journal</title>
+    <!-- Chart.js for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1"></script>
 </head>
 <body>
     <div class="container">
@@ -28,7 +31,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2 id="chartTitle">Trade Chart</h2>
-            <div id="tradeChart">Chart will display here (TradingView integration coming soon)</div>
+            <canvas id="tradeChart"></canvas>
         </div>
     </div>
 
