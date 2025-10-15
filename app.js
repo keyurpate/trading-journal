@@ -11,6 +11,18 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupEventListeners() {
     document.getElementById('importCsvButton').addEventListener('click', importCsv);
     document.getElementById('accountFilter').addEventListener('change', filterByAccount);
+    
+    // Modal close
+    const modal = document.getElementById('chartModal');
+    const closeBtn = document.querySelector('.close');
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
 }
 
 // CSV Import Function - Fixed for partial exits
@@ -28,12 +40,10 @@ function importCsv() {
         const csv = e.target.result;
         const lines = csv.split('\n');
         
-        // Parse NinjaTrader format with position tracking
         const parsedTrades = [];
         let currentPosition = null;
         let exits = [];
         
-        // Process from bottom to top (oldest to newest)
         for (let i = lines.length - 1; i >= 1; i--) {
             if (!lines[i].trim()) continue;
             
@@ -52,7 +62,6 @@ function importCsv() {
             
             if (trade.entryExit === 'Entry') {
                 if (currentPosition && exits.length > 0) {
-                    // Calculate weighted average exit
                     const totalExitQty = exits.reduce((sum, ex) => sum + ex.quantity, 0);
                     const weightedExitPrice = exits.reduce((sum, ex) => sum + (ex.price * ex.quantity), 0) / totalExitQty;
                     const exitTime = exits[0].time;
@@ -82,7 +91,6 @@ function importCsv() {
             }
         }
         
-        // Save imported trades
         trades = [...trades, ...parsedTrades];
         localStorage.setItem('trades', JSON.stringify(trades));
         
@@ -96,7 +104,6 @@ function importCsv() {
     reader.readAsText(file);
 }
 
-// Calculate P&L
 function calculatePnL(entry, exit) {
     let pnl;
     if (entry.action.toLowerCase() === 'buy') {
@@ -112,7 +119,6 @@ function calculatePnL(entry, exit) {
     return pnl;
 }
 
-// Update account filter dropdown
 function updateAccountFilter() {
     const filter = document.getElementById('accountFilter');
     const uniqueAccounts = [...new Set(trades.map(t => t.account))];
@@ -125,13 +131,11 @@ function updateAccountFilter() {
     });
 }
 
-// Filter trades by account
 function filterByAccount() {
     const selectedAccount = document.getElementById('accountFilter').value;
     loadTrades(selectedAccount);
 }
 
-// Load and display trades
 function loadTrades(filterAccount = 'all') {
     const container = document.getElementById('tradesContainer');
     let filteredTrades = trades;
@@ -150,7 +154,7 @@ function loadTrades(filterAccount = 'all') {
     let html = '<div class="stats-section"><h2>Performance Statistics</h2><div class="stats-grid">';
     html += '<div class="stat-card"><h3>Total Trades</h3><p>' + stats.totalTrades + '</p></div>';
     html += '<div class="stat-card"><h3>Win Rate</h3><p>' + stats.winRate + '%</p></div>';
-    html += '<div class="stat-card"><h3>Total P&L</h3><p style="color: ' + (stats.totalPnL >= 0 ? '#22c55e' : '#ef4444') + '">$' + stats.totalPnL.toFixed(2) + '</p></div>';
+    html += '<div class="stat-card"><h3>Total P&L</h3><p style="color: white">$' + stats.totalPnL.toFixed(2) + '</p></div>';
     html += '<div class="stat-card"><h3>Avg Win/Loss</h3><p>$' + stats.avgPnL.toFixed(2) + '</p></div>';
     html += '</div></div><div class="trades-section"><h2>Trade History</h2>';
     
@@ -159,20 +163,22 @@ function loadTrades(filterAccount = 'all') {
         html += '<div class="trade-symbol">' + trade.symbol + '</div>';
         html += '<div style="color: #666; font-size: 14px;">' + trade.tradeType.toUpperCase() + ' | ' + trade.account + '</div></div>';
         html += '<div class="trade-pnl ' + (trade.pnl >= 0 ? 'profit' : 'loss') + '">' + (trade.pnl >= 0 ? '+' : '') + '$' + trade.pnl.toFixed(2) + '</div></div>';
-        html += '<div class="trade-details"><div class="trade-detail">Entry: $' + trade.entryPrice.toFixed(2) + '<span>' + new Date(trade.entryDate).toLocaleString() + '</span></div>';
-        html += '<div class="trade-detail">Exit: $' + trade.exitPrice.toFixed(2) + '<span>' + new Date(trade.exitDate).toLocaleString() + '</span></div>';
-        html += '<div class="trade-detail">Quantity: ' + trade.quantity + '</div></div>';
+        html += '<div class="trade-details"><div class="trade-detail">Entry<span>$' + trade.entryPrice.toFixed(2) + '</span><span style="font-size:12px;color:#94a3b8">' + new Date(trade.entryDate).toLocaleString() + '</span></div>';
+        html += '<div class="trade-detail">Exit<span>$' + trade.exitPrice.toFixed(2) + '</span><span style="font-size:12px;color:#94a3b8">' + new Date(trade.exitDate).toLocaleString() + '</span></div>';
+        html += '<div class="trade-detail">Quantity<span>' + trade.quantity + '</span></div></div>';
         if (trade.notes) {
-            html += '<div style="margin-top: 10px; font-size: 12px; color: #666;">' + trade.notes + '</div>';
+            html += '<div style="margin-top: 10px; margin-bottom: 15px; font-size: 12px; color: #666; font-style: italic;">' + trade.notes + '</div>';
         }
-        html += '<button class="delete-btn" onclick="deleteTrade(' + trade.id + ')">Delete</button></div>';
+        html += '<div class="button-group">';
+        html += '<button class="view-chart-btn" onclick="viewChart(' + trade.id + ')">View Chart</button>';
+        html += '<button class="delete-btn" onclick="deleteTrade(' + trade.id + ')">Delete</button>';
+        html += '</div></div>';
     });
     
     html += '</div>';
     container.innerHTML = html;
 }
 
-// Calculate statistics
 function calculateStats(tradeList) {
     const totalTrades = tradeList.length;
     const wins = tradeList.filter(t => t.pnl > 0).length;
@@ -182,7 +188,6 @@ function calculateStats(tradeList) {
     return { totalTrades, winRate, totalPnL, avgPnL };
 }
 
-// Delete trade
 function deleteTrade(id) {
     if (confirm('Are you sure you want to delete this trade?')) {
         trades = trades.filter(t => t.id !== id);
@@ -190,4 +195,19 @@ function deleteTrade(id) {
         updateAccountFilter();
         loadTrades();
     }
+}
+
+function viewChart(tradeId) {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    
+    const modal = document.getElementById('chartModal');
+    const chartTitle = document.getElementById('chartTitle');
+    const chartDiv = document.getElementById('tradeChart');
+    
+    chartTitle.textContent = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade';
+    
+    chartDiv.innerHTML = '<div style="text-align:center; padding: 40px;"><h3>' + trade.symbol + '</h3><p style="margin-top: 20px;">Entry: $' + trade.entryPrice.toFixed(2) + ' → Exit: $' + trade.exitPrice.toFixed(2) + '</p><p style="margin-top: 10px; font-size: 24px; font-weight: bold; color: ' + (trade.pnl >= 0 ? '#10b981' : '#ef4444') + '">' + (trade.pnl >= 0 ? '+' : '') + '$' + trade.pnl.toFixed(2) + '</p><p style="margin-top: 20px; color: #64748b;">TradingView chart integration coming soon!</p></div>';
+    
+    modal.style.display = 'block';
 }
