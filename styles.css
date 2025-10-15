@@ -203,6 +203,7 @@ select {
 .button-group {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .delete-btn {
@@ -276,33 +277,45 @@ select {
     width: 100%;
     height: 500px;
     margin-top: 20px;
-    background: #f8fafc;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #64748b;
-    font-size: 18px;
 }
 
 @media (max-width: 768px) {
     .container {
         padding: 20px;
     }
+    
     h1 {
         font-size: 32px;
     }
+    
     .stats-grid {
         grid-template-columns: 1fr;
     }
+    
     .trade-details {
         grid-template-columns: 1fr;
     }
+    
     .trade-pnl {
         font-size: 24px;
     }
+    
     .modal-content {
         width: 95%;
         margin: 10% auto;
+        padding: 20px;
+    }
+    
+    #tradeChart {
+        height: 300px;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .delete-btn,
+    .view-chart-btn {
+        width: 100%;
     }
 }
