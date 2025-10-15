@@ -7,18 +7,31 @@
     <title>Trading Journal</title>
 </head>
 <body>
-    <h1>Trading Journal</h1>
-    <div class="import-section">
-        <h2>Import Trades</h2>
-        <input type="file" id="csvFileInput" accept="text/csv">
-        <button id="importCsvButton">Import CSV</button>
-        <label for="accountFilter">Filter by Account:</label>
-        <select id="accountFilter">
-            <option value="all">All Accounts</option>
-            <!-- Options will be populated dynamically -->
-        </select>
+    <div class="container">
+        <h1>Trading Journal</h1>
+        
+        <div class="import-section">
+            <h2>Import Trades</h2>
+            <input type="file" id="csvFileInput" accept=".csv">
+            <button id="importCsvButton">Import CSV</button>
+            <label for="accountFilter">Filter by Account:</label>
+            <select id="accountFilter">
+                <option value="all">All Accounts</option>
+            </select>
+        </div>
+        
+        <div id="tradesContainer"></div>
     </div>
-    <div id="tradesContainer"></div>
+
+    <!-- Chart Modal -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="chartTitle">Trade Chart</h2>
+            <div id="tradeChart">Chart will display here (TradingView integration coming soon)</div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
