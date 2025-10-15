@@ -203,11 +203,137 @@ function viewChart(tradeId) {
     
     const modal = document.getElementById('chartModal');
     const chartTitle = document.getElementById('chartTitle');
-    const chartDiv = document.getElementById('tradeChart');
     
     chartTitle.textContent = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade';
     
-    chartDiv.innerHTML = '<div style="text-align:center; padding: 40px;"><h3>' + trade.symbol + '</h3><p style="margin-top: 20px;">Entry: $' + trade.entryPrice.toFixed(2) + ' → Exit: $' + trade.exitPrice.toFixed(2) + '</p><p style="margin-top: 10px; font-size: 24px; font-weight: bold; color: ' + (trade.pnl >= 0 ? '#10b981' : '#ef4444') + '">' + (trade.pnl >= 0 ? '+' : '') + '$' + trade.pnl.toFixed(2) + '</p><p style="margin-top: 20px; color: #64748b;">TradingView chart integration coming soon!</p></div>';
+    // Clear previous chart
+    const chartCanvas = document.getElementById('tradeChart');
+    const ctx = chartCanvas.getContext('2d');
+    
+    // Destroy previous chart instance if exists
+    if (window.currentChart) {
+        window.currentChart.destroy();
+    }
+    
+    // Generate simulated price data around entry/exit
+    const entryPrice = trade.entryPrice;
+    const exitPrice = trade.exitPrice;
+    const priceRange = Math.abs(exitPrice - entryPrice);
+    const buffer = priceRange * 0.3;
+    
+    const dataPoints = 50;
+    const labels = [];
+    const prices = [];
+    
+    const entryIndex = 15;
+    const exitIndex = 40;
+    
+    for (let i = 0; i < dataPoints; i++) {
+        labels.push('');
+        
+        if (i < entryIndex) {
+            // Before entry - random walk
+            prices.push(entryPrice + (Math.random() - 0.5) * buffer);
+        } else if (i >= entryIndex && i < exitIndex) {
+            // Between entry and exit - trend towards exit
+            const progress = (i - entryIndex) / (exitIndex - entryIndex);
+            const trendPrice = entryPrice + (exitPrice - entryPrice) * progress;
+            prices.push(trendPrice + (Math.random() - 0.5) * (buffer * 0.5));
+        } else {
+            // After exit
+            prices.push(exitPrice + (Math.random() - 0.5) * buffer);
+        }
+    }
+    
+    // Create chart
+    window.currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Price',
+                data: prices,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '$' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        entryLine: {
+                            type: 'line',
+                            yMin: entryPrice,
+                            yMax: entryPrice,
+                            borderColor: trade.tradeType === 'long' ? '#10b981' : '#ef4444',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            label: {
+                                display: true,
+                                content: 'Entry: $' + entryPrice.toFixed(2),
+                                position: 'start'
+                            }
+                        },
+                        exitLine: {
+                            type: 'line',
+                            yMin: exitPrice,
+                            yMax: exitPrice,
+                            borderColor: trade.pnl >= 0 ? '#10b981' : '#ef4444',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            label: {
+                                display: true,
+                                content: 'Exit: $' + exitPrice.toFixed(2),
+                                position: 'end'
+                            }
+                        },
+                        entryPoint: {
+                            type: 'point',
+                            xValue: entryIndex,
+                            yValue: entryPrice,
+                            backgroundColor: trade.tradeType === 'long' ? '#10b981' : '#ef4444',
+                            radius: 8,
+                            borderWidth: 2,
+                            borderColor: 'white'
+                        },
+                        exitPoint: {
+                            type: 'point',
+                            xValue: exitIndex,
+                            yValue: exitPrice,
+                            backgroundColor: trade.pnl >= 0 ? '#10b981' : '#ef4444',
+                            radius: 8,
+                            borderWidth: 2,
+                            borderColor: 'white'
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
     
     modal.style.display = 'block';
 }
