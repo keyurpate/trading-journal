@@ -1,67 +1,45 @@
-.import-section {
-    background: #f9f9f9; /* Example background */
-    padding: 20px; /* Example padding */
-    border-radius: 8px; /* Example border radius */
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 20px;
 }
 
-input[type="file"],
-select {
-    border: 1px solid #ccc; /* Example border */
-    border-radius: 4px; /* Example border radius */
-    padding: 10px; /* Example padding */
+.card {
+    background: linear-gradient(to right, #7b1fa2, #512da8);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
 }
 
-.stats-section {
-    margin: 20px 0; /* Example margin */
-    font-weight: bold; /* Example font weight */
+.card:hover {
+    transform: scale(1.05);
 }
 
-.trades-section {
-    margin: 20px 0; /* Example margin */
+.stat-card {
+    margin: 10px;
+    padding: 15px;
+    color: white;
 }
 
 .trade-card {
-    border: 1px solid #ddd; /* Example border */
-    border-radius: 5px; /* Example border radius */
-    padding: 15px; /* Example padding */
-    margin-bottom: 15px; /* Example margin */
+    margin: 10px;
 }
 
-.trade-header {
-    font-size: 1.2em; /* Example font size */
-}
-
-.trade-symbol {
-    color: #333; /* Example color */
-}
-
-.trade-pnl {
-    font-weight: bold; /* Example font weight */
-}
-
-.profit {
-    color: green; /* Profit color */
-}
-
-.loss {
-    color: red; /* Loss color */
-}
-
-.delete-btn {
-    background-color: #e57373; /* Example delete button color */
-    color: white; /* Text color */
-    border: none; /* No border */
-    border-radius: 4px; /* Rounded corners */
-    padding: 10px 15px; /* Padding */
-    cursor: pointer; /* Pointer cursor */
+.chart-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.8);
 }
 
 @media (max-width: 600px) {
-    .trade-card {
-        padding: 10px; /* Adjust padding for smaller screens */
-    }
-    
-    .import-section {
-        padding: 15px; /* Adjust padding for smaller screens */
+    .container {
+        flex-direction: column;
     }
 }
