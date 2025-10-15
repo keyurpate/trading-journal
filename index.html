@@ -3,131 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Journal</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Trading Journal</title>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header>
-            <h1>📊 Trading Journal</h1>
-            <p>Track your trades, analyze performance, grow as a trader</p>
-        </header>
-
-        <!-- Navigation -->
-        <nav class="tabs">
-            <button class="tab-btn active" onclick="showTab('dashboard')">Dashboard</button>
-            <button class="tab-btn" onclick="showTab('trades')">Trades</button>
-            <button class="tab-btn" onclick="showTab('journal')">Journal</button>
-        </nav>
-
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total Trades</h3>
-                    <p class="stat-value" id="totalTrades">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Win Rate</h3>
-                    <p class="stat-value" id="winRate">0%</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Total P&L</h3>
-                    <p class="stat-value" id="totalPnL">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Avg Win/Loss</h3>
-                    <p class="stat-value" id="avgWinLoss">$0.00</p>
-                </div>
-            </div>
-
-            <div class="chart-container">
-                <h3>P&L Over Time</h3>
-                <canvas id="pnlChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Trades Tab -->
-        <div id="trades" class="tab-content">
-            <div class="trades-header">
-                <button class="btn-primary" onclick="showAddTradeForm()">+ Add Trade</button>
-            </div>
-
-            <!-- Add Trade Form -->
-            <div id="addTradeForm" class="trade-form" style="display: none;">
-                <h3>Log New Trade</h3>
-                <form onsubmit="addTrade(event)">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Symbol/Ticker</label>
-                            <input type="text" id="symbol" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Trade Type</label>
-                            <select id="tradeType" required>
-                                <option value="long">Long</option>
-                                <option value="short">Short</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Entry Price</label>
-                            <input type="number" step="0.01" id="entryPrice" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Exit Price</label>
-                            <input type="number" step="0.01" id="exitPrice" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Entry Date</label>
-                            <input type="datetime-local" id="entryDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Exit Date</label>
-                            <input type="datetime-local" id="exitDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Quantity</label>
-                            <input type="number" id="quantity" value="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Strategy</label>
-                            <input type="text" id="strategy" placeholder="e.g., Breakout, Support/Resistance">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Notes</label>
-                        <textarea id="notes" rows="3" placeholder="Trade notes, lessons learned..."></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary">Save Trade</button>
-                        <button type="button" class="btn-secondary" onclick="hideAddTradeForm()">Cancel</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Trades List -->
-            <div class="trades-list" id="tradesList">
-                <!-- Trades will be loaded here -->
-            </div>  
-        </div>
-
-        <!-- Journal Tab -->
-        <div id="journal" class="tab-content">
-            <div class="journal-container">
-                <h3>Trading Journal & Notes</h3>
-                <div class="journal-input">
-                    <textarea id="journalInput" placeholder="Write your trading thoughts, lessons learned, market observations..." rows="4"></textarea>
-                    <button class="btn-primary" onclick="addJournalEntry()">Add Entry</button>
-                </div>
-                <div class="journal-entries" id="journalEntries">
-                    <!-- Journal entries will be loaded here -->
-                </div>
-            </div>
-        </div>
+    <h1>Trading Journal</h1>
+    <div class="import-section">
+        <h2>Import Trades</h2>
+        <input type="file" id="csvFileInput" accept="text/csv">
+        <button id="importCsvButton">Import CSV</button>
+        <label for="accountFilter">Filter by Account:</label>
+        <select id="accountFilter">
+            <option value="all">All Accounts</option>
+            <!-- Options will be populated dynamically -->
+        </select>
     </div>
-
+    <div id="tradesContainer"></div>
     <script src="app.js"></script>
 </body>
 </html>
