@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
-    <title>Trading Journal</title>
+    <title>Trading Journal - Advanced</title>
 </head>
 <body>
     <div class="container">
-        <h1>Trading Journal</h1>
+        <h1>📊 Trading Journal</h1>
         
         <div class="import-section">
             <h2>Import Trades</h2>
@@ -18,6 +18,31 @@
             <select id="accountFilter">
                 <option value="all">All Accounts</option>
             </select>
+            <label for="playbookFilter" style="margin-left: 20px;">Filter by Playbook:</label>
+            <select id="playbookFilter">
+                <option value="all">All Playbooks</option>
+            </select>
+        </div>
+
+        <!-- API Key Section -->
+        <div class="import-section" style="margin-top: 20px;">
+            <h2>🔑 Market Data API Settings</h2>
+            <label for="apiKeyInput">Polygon.io API Key:</label>
+            <input type="text" id="apiKeyInput" placeholder="Enter your API key here" style="width: 400px; margin-right: 10px;">
+            <button id="saveApiKeyButton" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Save API Key</button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                Don't have an API key? <a href="https://polygon.io/" target="_blank" style="color: #667eea;">Get one free at Polygon.io</a>
+            </p>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <button id="prevMonth" class="calendar-nav">←</button>
+                <h2 id="calendarTitle">October 2025</h2>
+                <button id="nextMonth" class="calendar-nav">→</button>
+            </div>
+            <div id="calendar"></div>
         </div>
         
         <div id="tradesContainer"></div>
@@ -32,8 +57,106 @@
         </div>
     </div>
 
-    <!-- Lightweight Charts Library (CORRECTED CDN) -->
-   <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Day Trades Modal -->
+    <div id="dayTradesModal" class="modal">
+        <div class="modal-content">
+            <span class="close-day">&times;</span>
+            <h2 id="dayTradesTitle">Trades for Selected Day</h2>
+            <div id="dayTradesContent"></div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="deleteDayTradesBtn" class="delete-day-btn">🗑️ Delete All Trades This Day</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Trade Modal -->
+    <div id="editTradeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-edit">&times;</span>
+            <h2>✏️ Edit Trade Details</h2>
+            <div id="editTradeForm">
+                <div class="form-group">
+                    <label>Playbook/Setup:</label>
+                    <select id="editPlaybook">
+                        <option value="">Select Playbook</option>
+                        <option value="9 EMA Trend">9 EMA Trend</option>
+                        <option value="Breakout">Breakout</option>
+                        <option value="Support/Resistance">Support/Resistance</option>
+                        <option value="VWAP Bounce">VWAP Bounce</option>
+                        <option value="Opening Range">Opening Range</option>
+                        <option value="Reversal">Reversal</option>
+                        <option value="Scalp">Scalp</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Entry Quality:</label>
+                    <div class="rating-buttons">
+                        <button class="rating-btn" data-rating="1" data-type="entry">1 ⭐</button>
+                        <button class="rating-btn" data-rating="2" data-type="entry">2 ⭐</button>
+                        <button class="rating-btn" data-rating="3" data-type="entry">3 ⭐</button>
+                        <button class="rating-btn" data-rating="4" data-type="entry">4 ⭐</button>
+                        <button class="rating-btn" data-rating="5" data-type="entry">5 ⭐</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Exit Quality:</label>
+                    <div class="rating-buttons">
+                        <button class="rating-btn" data-rating="1" data-type="exit">1 ⭐</button>
+                        <button class="rating-btn" data-rating="2" data-type="exit">2 ⭐</button>
+                        <button class="rating-btn" data-rating="3" data-type="exit">3 ⭐</button>
+                        <button class="rating-btn" data-rating="4" data-type="exit">4 ⭐</button>
+                        <button class="rating-btn" data-rating="5" data-type="exit">5 ⭐</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Discipline Rating:</label>
+                    <div class="rating-buttons">
+                        <button class="rating-btn" data-rating="1" data-type="discipline">1 ⭐</button>
+                        <button class="rating-btn" data-rating="2" data-type="discipline">2 ⭐</button>
+                        <button class="rating-btn" data-rating="3" data-type="discipline">3 ⭐</button>
+                        <button class="rating-btn" data-rating="4" data-type="discipline">4 ⭐</button>
+                        <button class="rating-btn" data-rating="5" data-type="discipline">5 ⭐</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Tags (comma separated):</label>
+                    <input type="text" id="editTags" placeholder="e.g. FOMO, Revenge Trade, Perfect Setup">
+                </div>
+
+                <div class="form-group">
+                    <label>Mistakes Made:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" class="mistake-check" value="Overleveraged"> Overleveraged</label>
+                        <label><input type="checkbox" class="mistake-check" value="Moved Stop"> Moved Stop Loss</label>
+                        <label><input type="checkbox" class="mistake-check" value="FOMO"> FOMO Trade</label>
+                        <label><input type="checkbox" class="mistake-check" value="Revenge"> Revenge Trading</label>
+                        <label><input type="checkbox" class="mistake-check" value="No Plan"> No Trade Plan</label>
+                        <label><input type="checkbox" class="mistake-check" value="Ignored Rules"> Ignored Rules</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Trade Notes/Journal:</label>
+                    <textarea id="editNotes" rows="4" placeholder="What happened during this trade? What did you learn?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Screenshot URL (optional):</label>
+                    <input type="text" id="editScreenshot" placeholder="https://i.imgur.com/example.png">
+                </div>
+
+                <button id="saveTradeBtn" class="save-trade-btn">💾 Save Trade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightweight Charts Library -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
