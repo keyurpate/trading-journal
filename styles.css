@@ -77,7 +77,7 @@ select {
     cursor: pointer;
 }
 
-/* Calendar Styles */
+/* Calendar Styles - IMPROVED */
 .calendar-section {
     background: white;
     border-radius: 15px;
@@ -91,21 +91,22 @@ select {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
 .calendar-header h2 {
     color: #1e293b;
-    font-size: 24px;
+    font-size: 28px;
     margin: 0;
+    font-weight: 700;
 }
 
 .calendar-nav {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
@@ -113,51 +114,55 @@ select {
 }
 
 .calendar-nav:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 #calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
+    gap: 8px;
 }
 
 .calendar-day-header {
     text-align: center;
-    font-weight: 600;
+    font-weight: 700;
     color: #64748b;
-    padding: 10px;
+    padding: 15px;
     font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .calendar-day {
     aspect-ratio: 1;
     border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 12px;
+    padding: 12px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     background: white;
+    position: relative;
 }
 
 .calendar-day:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    z-index: 10;
 }
 
 .calendar-day.other-month {
-    opacity: 0.3;
+    opacity: 0.2;
     pointer-events: none;
 }
 
 .calendar-day.today {
     border: 3px solid #667eea;
-    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.4);
 }
 
 .calendar-day.profit {
@@ -165,21 +170,30 @@ select {
     border-color: #10b981;
 }
 
+.calendar-day.profit:hover {
+    background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+}
+
 .calendar-day.loss {
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     border-color: #ef4444;
 }
 
+.calendar-day.loss:hover {
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+}
+
 .day-number {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: #1e293b;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
 }
 
 .day-pnl {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 5px;
 }
 
 .day-pnl.profit {
@@ -191,9 +205,21 @@ select {
 }
 
 .day-trades-count {
-    font-size: 10px;
+    font-size: 11px;
     color: #64748b;
-    margin-top: 3px;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.calendar-day.has-trades::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #667eea;
 }
 
 /* Stats Section */
@@ -465,39 +491,76 @@ select {
     position: relative;
 }
 
-/* Day Trades Modal */
+/* Day Trades Modal - IMPROVED */
+#dayTradesModal .modal-content {
+    max-width: 900px;
+}
+
+#dayTradesTitle {
+    color: #1e293b;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
 .delete-day-btn {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
     border: none;
-    padding: 12px 30px;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 600;
+    padding: 15px 40px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.3s;
 }
 
 .delete-day-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.5);
 }
 
 #dayTradesContent {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     margin-top: 20px;
+    padding-right: 10px;
+}
+
+#dayTradesContent::-webkit-scrollbar {
+    width: 8px;
+}
+
+#dayTradesContent::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+#dayTradesContent::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+#dayTradesContent::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 .day-trade-item {
-    background: #f8fafc;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 10px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 1px solid #e2e8f0;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s;
+}
+
+.day-trade-item:hover {
+    transform: translateX(5px);
+    border-color: #667eea;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
 }
 
 .day-trade-info {
@@ -506,21 +569,22 @@ select {
 
 .day-trade-symbol {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 20px;
     color: #1e293b;
+    margin-bottom: 8px;
 }
 
 .day-trade-details {
-    font-size: 12px;
+    font-size: 13px;
     color: #64748b;
     margin-top: 5px;
 }
 
 .day-trade-pnl {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
-    padding: 8px 15px;
-    border-radius: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
 }
 
 .day-trade-pnl.profit {
@@ -531,6 +595,34 @@ select {
 .day-trade-pnl.loss {
     color: #ef4444;
     background: #fee2e2;
+}
+
+.day-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.day-summary-item {
+    text-align: center;
+}
+
+.day-summary-item h3 {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.day-summary-item p {
+    font-size: 28px;
+    font-weight: 700;
 }
 
 /* Edit Trade Form */
@@ -672,5 +764,10 @@ select {
     
     .checkbox-group {
         grid-template-columns: 1fr;
+    }
+    
+    .day-summary {
+        flex-direction: column;
+        gap: 15px;
     }
 }
