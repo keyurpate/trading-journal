@@ -10,6 +10,10 @@ let currentEditTradeId = null;
 let currentCalendarMonth = new Date().getMonth();
 let currentCalendarYear = new Date().getFullYear();
 
+// Current filters
+let currentAccountFilter = 'all';
+let currentPlaybookFilter = 'all';
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     loadTrades();
@@ -236,7 +240,10 @@ function calculatePnL(entry, exit) {
         pnl = (entry.price - exit.price) * entry.quantity;
     }
     
-    if (entry.instrument.includes('MES') || entry.instrument.includes('MNQ')) {
+    // FIXED: MNQ multiplier is $2 per point (not $5)
+    if (entry.instrument.includes('MNQ')) {
+        pnl = pnl * 2;
+    } else if (entry.instrument.includes('MES')) {
         pnl = pnl * 5;
     }
     
@@ -268,9 +275,12 @@ function updateFilters() {
 }
 
 function filterTrades() {
-    const selectedAccount = document.getElementById('accountFilter').value;
-    const selectedPlaybook = document.getElementById('playbookFilter').value;
-    loadTrades(selectedAccount, selectedPlaybook);
+    currentAccountFilter = document.getElementById('accountFilter').value;
+    currentPlaybookFilter = document.getElementById('playbookFilter').value;
+    
+    // Update calendar when filters change
+    renderCalendar();
+    loadTrades(currentAccountFilter, currentPlaybookFilter);
 }
 
 function loadTrades(filterAccount = 'all', filterPlaybook = 'all') {
@@ -386,7 +396,7 @@ function deleteTrade(id) {
         localStorage.setItem('trades', JSON.stringify(trades));
         updateFilters();
         renderCalendar();
-        loadTrades();
+        loadTrades(currentAccountFilter, currentPlaybookFilter);
     }
 }
 
@@ -473,7 +483,7 @@ function saveTrade() {
     
     updateFilters();
     renderCalendar();
-    loadTrades();
+    loadTrades(currentAccountFilter, currentPlaybookFilter);
     
     alert('✅ Trade updated successfully!');
 }
@@ -519,10 +529,19 @@ function renderCalendar() {
     
     title.textContent = monthNames[currentCalendarMonth] + ' ' + currentCalendarYear;
     
+    // FIXED: Filter trades by current account filter
+    let filteredTrades = trades;
+    if (currentAccountFilter !== 'all') {
+        filteredTrades = filteredTrades.filter(t => t.account === currentAccountFilter);
+    }
+    if (currentPlaybookFilter !== 'all') {
+        filteredTrades = filteredTrades.filter(t => t.playbook === currentPlaybookFilter);
+    }
+    
     const dailyPnL = {};
     const dailyTrades = {};
     
-    trades.forEach(trade => {
+    filteredTrades.forEach(trade => {
         const date = new Date(trade.entryDate);
         const dateKey = date.getFullYear() + '-' + 
                        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -596,13 +615,21 @@ function renderCalendar() {
 }
 
 function showDayTrades(dateKey) {
-    const dayTrades = trades.filter(trade => {
+    // FIXED: Apply current filters to day trades
+    let dayTrades = trades.filter(trade => {
         const date = new Date(trade.entryDate);
         const tradeKey = date.getFullYear() + '-' + 
                         String(date.getMonth() + 1).padStart(2, '0') + '-' + 
                         String(date.getDate()).padStart(2, '0');
         return tradeKey === dateKey;
     });
+    
+    if (currentAccountFilter !== 'all') {
+        dayTrades = dayTrades.filter(t => t.account === currentAccountFilter);
+    }
+    if (currentPlaybookFilter !== 'all') {
+        dayTrades = dayTrades.filter(t => t.playbook === currentPlaybookFilter);
+    }
     
     if (dayTrades.length === 0) {
         alert('No trades found for this day');
@@ -657,7 +684,7 @@ function showDayTrades(dateKey) {
 }
 
 function deleteDayTrades(dateKey) {
-    const dayTrades = trades.filter(trade => {
+    let dayTrades = trades.filter(trade => {
         const date = new Date(trade.entryDate);
         const tradeKey = date.getFullYear() + '-' + 
                         String(date.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -665,17 +692,19 @@ function deleteDayTrades(dateKey) {
         return tradeKey === dateKey;
     });
     
+    if (currentAccountFilter !== 'all') {
+        dayTrades = dayTrades.filter(t => t.account === currentAccountFilter);
+    }
+    if (currentPlaybookFilter !== 'all') {
+        dayTrades = dayTrades.filter(t => t.playbook === currentPlaybookFilter);
+    }
+    
     const date = new Date(dateKey);
     const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     
     if (confirm('⚠️ Are you sure you want to delete ALL ' + dayTrades.length + ' trades from ' + dateStr + '?')) {
-        trades = trades.filter(trade => {
-            const date = new Date(trade.entryDate);
-            const tradeKey = date.getFullYear() + '-' + 
-                            String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                            String(date.getDate()).padStart(2, '0');
-            return tradeKey !== dateKey;
-        });
+        const idsToDelete = dayTrades.map(t => t.id);
+        trades = trades.filter(trade => !idsToDelete.includes(trade.id));
         
         localStorage.setItem('trades', JSON.stringify(trades));
         
@@ -683,7 +712,7 @@ function deleteDayTrades(dateKey) {
         
         renderCalendar();
         updateFilters();
-        loadTrades();
+        loadTrades(currentAccountFilter, currentPlaybookFilter);
         
         alert('✅ Successfully deleted ' + dayTrades.length + ' trades from ' + dateStr);
     }
@@ -898,7 +927,6 @@ async function viewChart(tradeId) {
         const ema9Data = [];
         const ema21Data = [];
         const sma200Data = [];
-        const volumeData = [];
         
         let ema9 = candleData[0].close;
         let ema21 = candleData[0].close;
@@ -919,12 +947,6 @@ async function viewChart(tradeId) {
                 const sma200 = smaWindow.reduce((a, b) => a + b, 0) / smaWindow.length;
                 sma200Data.push({ time: candle.time, value: sma200 });
             }
-            
-            volumeData.push({
-                time: candle.time,
-                value: candle.volume,
-                color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'
-            });
         });
         
         const candleSeries = chartInstance.addCandlestickSeries({
@@ -948,15 +970,7 @@ async function viewChart(tradeId) {
             sma200Series.setData(sma200Data);
         }
         
-        const volumeSeries = chartInstance.addHistogramSeries({
-            priceFormat: { type: 'volume' },
-            priceScaleId: 'volume',
-            scaleMargins: { 
-                top: 0.95,
-                bottom: 0
-            },
-        });
-        volumeSeries.setData(volumeData);
+        // REMOVED VOLUME - No longer displayed
         
         const entryTimestamp = Math.floor(entryDate.getTime() / 1000);
         const exitTimestamp = Math.floor(exitDate.getTime() / 1000);
