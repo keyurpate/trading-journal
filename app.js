@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadApiKey();
     
-    // Auto-save the API key if not already saved
     if (!localStorage.getItem('polygonApiKey')) {
         localStorage.setItem('polygonApiKey', polygonApiKey);
     }
@@ -20,7 +19,6 @@ function setupEventListeners() {
     document.getElementById('accountFilter').addEventListener('change', filterByAccount);
     document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
     
-    // Modal close - FIXED
     const modal = document.getElementById('chartModal');
     const closeBtn = document.querySelector('.close');
     
@@ -49,13 +47,12 @@ function saveApiKey() {
     polygonApiKey = apiKeyInput.value.trim();
     if (polygonApiKey) {
         localStorage.setItem('polygonApiKey', polygonApiKey);
-        alert('API Key saved successfully! You can now view real market data charts.');
+        alert('API Key saved successfully!');
     } else {
         alert('Please enter a valid API key.');
     }
 }
 
-// CSV Import Function
 function importCsv() {
     const fileInput = document.getElementById('csvFileInput');
     const file = fileInput.files[0];
@@ -127,7 +124,7 @@ function importCsv() {
         updateAccountFilter();
         loadTrades();
         
-        alert('Successfully imported ' + parsedTrades.length + ' trades from ' + accounts.size + ' account(s)!');
+        alert('Successfully imported ' + parsedTrades.length + ' trades!');
         fileInput.value = '';
     };
     
@@ -227,7 +224,6 @@ function deleteTrade(id) {
     }
 }
 
-// Convert NinjaTrader symbol to Polygon.io ticker
 function getPolygonTicker(symbol) {
     if (symbol.includes('MES')) return 'I:MES';
     if (symbol.includes('ES')) return 'I:ES';
@@ -237,7 +233,6 @@ function getPolygonTicker(symbol) {
     return symbol.split(' ')[0];
 }
 
-// Fetch REAL market data from Polygon.io
 async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
     if (!polygonApiKey) {
         console.warn('No API key set.');
@@ -252,22 +247,20 @@ async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
     else if (timeframe === 300) { multiplier = 5; timespan = 'minute'; }
     else if (timeframe === 900) { multiplier = 15; timespan = 'minute'; }
     else if (timeframe === 3600) { multiplier = 1; timespan = 'hour'; }
-    else if (timeframe === 14400) { multiplier = 4; timespan = 'hour'; }
-    else if (timeframe === 86400) { multiplier = 1; timespan = 'day'; }
     
     const from = new Date(startDate).toISOString().split('T')[0];
     const to = new Date(endDate).toISOString().split('T')[0];
     
     const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&limit=50000&apiKey=${polygonApiKey}`;
     
-    console.log('Fetching real market data:', url.replace(polygonApiKey, 'API_KEY'));
+    console.log('Fetching:', url.replace(polygonApiKey, 'KEY'));
     
     try {
         const response = await fetch(url);
         const data = await response.json();
         
         if (data.results && data.results.length > 0) {
-            console.log(`✅ Fetched ${data.results.length} real candles from Polygon.io`);
+            console.log(`✅ Got ${data.results.length} real candles`);
             return data.results.map(candle => ({
                 time: Math.floor(candle.t / 1000),
                 open: candle.o,
@@ -277,7 +270,7 @@ async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
                 volume: candle.v
             }));
         } else {
-            console.warn('No data from API:', data.status || data.message);
+            console.warn('No data:', data.status);
             return null;
         }
     } catch (error) {
@@ -286,7 +279,6 @@ async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
     }
 }
 
-// Fallback: Generate realistic simulated data
 function generateRealisticCandles(symbol, entryTime, exitTime, entryPrice, exitPrice, timeframe) {
     const candles = [];
     const startTime = new Date(entryTime).getTime() / 1000;
@@ -357,8 +349,7 @@ function roundToTick(price, tickSize) {
 }
 
 function closeModal() {
-    const modal = document.getElementById('chartModal');
-    modal.style.display = 'none';
+    document.getElementById('chartModal').style.display = 'none';
 }
 
 async function viewChart(tradeId) {
@@ -369,10 +360,9 @@ async function viewChart(tradeId) {
     const chartTitle = document.getElementById('chartTitle');
     const chartDiv = document.getElementById('tradeChart');
     
-    // Add close button that works
     chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option></select></span>';
     
-    chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;"><div style="font-size:18px;margin-bottom:10px;">🔄 Loading REAL market data...</div><div style="font-size:14px;color:#94a3b8;">Fetching candles from Polygon.io</div></div>';
+    chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">🔄 Loading real market data...</div>';
     
     let chartInstance = null;
     
@@ -381,23 +371,30 @@ async function viewChart(tradeId) {
             chartDiv.innerHTML = '';
         }
         
-        chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">🔄 Loading...</div>';
+        chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">Loading...</div>';
         
-        const entryDate = new Date(trade.entryDate);
-        const exitDate = new Date(trade.exitDate);
+        // Parse CSV date format: "10/15/2025 2:00:32 PM"
+        const parseCSVDate = (dateStr) => {
+            // NinjaTrader format: MM/DD/YYYY HH:MM:SS AM/PM
+            return new Date(dateStr);
+        };
+        
+        const entryDate = parseCSVDate(trade.entryDate);
+        const exitDate = parseCSVDate(trade.exitDate);
         const tradeDuration = exitDate - entryDate;
         
-        const startDate = new Date(entryDate.getTime() - tradeDuration * 0.5);
+        const startDate = new Date(entryDate.getTime() - tradeDuration * 1);
         const endDate = new Date(exitDate.getTime() + tradeDuration * 0.5);
         
-        console.log('Trade Entry:', entryDate.toLocaleString());
-        console.log('Trade Exit:', exitDate.toLocaleString());
-        console.log('Fetching data from:', startDate.toLocaleString(), 'to', endDate.toLocaleString());
+        console.log('=== TRADE TIMES ===');
+        console.log('Entry:', entryDate.toLocaleString());
+        console.log('Exit:', exitDate.toLocaleString());
+        console.log('Fetching from:', startDate.toLocaleString(), 'to', endDate.toLocaleString());
         
         let candleData = await fetchRealMarketData(trade.symbol, startDate, endDate, timeframe);
         
         if (!candleData || candleData.length === 0) {
-            console.log('⚠️ Using simulated data (API returned no data)');
+            console.log('⚠️ Using simulated data');
             candleData = generateRealisticCandles(
                 trade.symbol,
                 trade.entryDate,
@@ -487,25 +484,25 @@ async function viewChart(tradeId) {
             sma200Series.setData(sma200Data);
         }
         
-        // FIXED: Volume only 8% of chart height
+        // FIXED: Volume only 5% of chart (bottom)
         const volumeSeries = chartInstance.addHistogramSeries({
             priceFormat: { type: 'volume' },
-            priceScaleId: '',
+            priceScaleId: 'volume',
             scaleMargins: { 
-                top: 0.92,  // Volume takes only bottom 8%
-                bottom: 0 
+                top: 0.95,   // Starts at 95% from top
+                bottom: 0    // Ends at bottom (only 5% height)
             },
         });
         volumeSeries.setData(volumeData);
         
-        // FIXED: Use EXACT entry/exit times from CSV
-        const entryTimestamp = Math.floor(new Date(trade.entryDate).getTime() / 1000);
-        const exitTimestamp = Math.floor(new Date(trade.exitDate).getTime() / 1000);
+        // EXACT entry/exit timestamps
+        const entryTimestamp = Math.floor(entryDate.getTime() / 1000);
+        const exitTimestamp = Math.floor(exitDate.getTime() / 1000);
         
-        console.log('Entry marker at:', new Date(entryTimestamp * 1000).toLocaleString());
-        console.log('Exit marker at:', new Date(exitTimestamp * 1000).toLocaleString());
+        console.log('Entry timestamp:', entryTimestamp, '=', new Date(entryTimestamp * 1000).toLocaleString());
+        console.log('Exit timestamp:', exitTimestamp, '=', new Date(exitTimestamp * 1000).toLocaleString());
         
-        // Find closest candles to entry/exit times
+        // Find closest candles
         const entryCandle = candleData.reduce((prev, curr) => 
             Math.abs(curr.time - entryTimestamp) < Math.abs(prev.time - entryTimestamp) ? curr : prev
         );
@@ -513,6 +510,9 @@ async function viewChart(tradeId) {
         const exitCandle = candleData.reduce((prev, curr) => 
             Math.abs(curr.time - exitTimestamp) < Math.abs(prev.time - exitTimestamp) ? curr : prev
         );
+        
+        console.log('Entry candle time:', new Date(entryCandle.time * 1000).toLocaleString());
+        console.log('Exit candle time:', new Date(exitCandle.time * 1000).toLocaleString());
         
         candleSeries.setMarkers([
             {
@@ -527,7 +527,7 @@ async function viewChart(tradeId) {
                 position: trade.tradeType === 'long' ? 'aboveBar' : 'belowBar',
                 color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
                 shape: 'arrowDown',
-                text: 'Exit: $' + trade.exitPrice.toFixed(2) + ' (P&L: $' + trade.pnl.toFixed(2) + ')',
+                text: 'Exit: $' + trade.exitPrice.toFixed(2) + ' ($' + trade.pnl.toFixed(2) + ')',
             }
         ]);
         
@@ -542,12 +542,9 @@ async function viewChart(tradeId) {
             selector.addEventListener('change', (e) => renderChart(parseInt(e.target.value)));
         }
         
-        // Re-attach close button handler
         const closeBtn = document.querySelector('.close');
         if (closeBtn) {
-            closeBtn.onclick = function() {
-                closeModal();
-            }
+            closeBtn.onclick = closeModal;
         }
     }, 100);
     
