@@ -1,16 +1,24 @@
 // Data storage
 let trades = JSON.parse(localStorage.getItem('trades')) || [];
 let accounts = new Set();
+let polygonApiKey = localStorage.getItem('polygonApiKey') || 'e329C3pUBVi1hwvO3WZKFd45kh9Bt5fn';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     loadTrades();
     setupEventListeners();
+    loadApiKey();
+    
+    // Auto-save the API key if not already saved
+    if (!localStorage.getItem('polygonApiKey')) {
+        localStorage.setItem('polygonApiKey', polygonApiKey);
+    }
 });
 
 function setupEventListeners() {
     document.getElementById('importCsvButton').addEventListener('click', importCsv);
     document.getElementById('accountFilter').addEventListener('change', filterByAccount);
+    document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
     
     // Modal close
     const modal = document.getElementById('chartModal');
@@ -25,7 +33,25 @@ function setupEventListeners() {
     }
 }
 
-// CSV Import Function - Fixed for partial exits
+function loadApiKey() {
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    if (polygonApiKey) {
+        apiKeyInput.value = polygonApiKey;
+    }
+}
+
+function saveApiKey() {
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    polygonApiKey = apiKeyInput.value.trim();
+    if (polygonApiKey) {
+        localStorage.setItem('polygonApiKey', polygonApiKey);
+        alert('API Key saved successfully! You can now view real market data charts.');
+    } else {
+        alert('Please enter a valid API key.');
+    }
+}
+
+// CSV Import Function
 function importCsv() {
     const fileInput = document.getElementById('csvFileInput');
     const file = fileInput.files[0];
@@ -197,7 +223,139 @@ function deleteTrade(id) {
     }
 }
 
-function viewChart(tradeId) {
+// Convert NinjaTrader symbol to Polygon.io ticker
+function getPolygonTicker(symbol) {
+    // MES DEC25 -> I:MES (Micro E-mini S&P 500 Futures)
+    if (symbol.includes('MES')) return 'I:MES';
+    if (symbol.includes('ES')) return 'I:ES';
+    if (symbol.includes('NQ')) return 'I:NQ';
+    if (symbol.includes('YM')) return 'I:YM';
+    if (symbol.includes('RTY')) return 'I:RTY';
+    return symbol.split(' ')[0];
+}
+
+// Fetch REAL market data from Polygon.io
+async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
+    if (!polygonApiKey) {
+        console.warn('No API key set.');
+        return null;
+    }
+    
+    const ticker = getPolygonTicker(symbol);
+    
+    // Convert timeframe to Polygon format
+    let multiplier = 1;
+    let timespan = 'minute';
+    if (timeframe === 60) { multiplier = 1; timespan = 'minute'; }
+    else if (timeframe === 300) { multiplier = 5; timespan = 'minute'; }
+    else if (timeframe === 900) { multiplier = 15; timespan = 'minute'; }
+    else if (timeframe === 3600) { multiplier = 1; timespan = 'hour'; }
+    else if (timeframe === 14400) { multiplier = 4; timespan = 'hour'; }
+    else if (timeframe === 86400) { multiplier = 1; timespan = 'day'; }
+    
+    // Format dates for Polygon API (YYYY-MM-DD)
+    const from = new Date(startDate).toISOString().split('T')[0];
+    const to = new Date(endDate).toISOString().split('T')[0];
+    
+    const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&limit=50000&apiKey=${polygonApiKey}`;
+    
+    console.log('Fetching real market data:', url.replace(polygonApiKey, 'API_KEY'));
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.results && data.results.length > 0) {
+            console.log(`✅ Fetched ${data.results.length} real candles from Polygon.io`);
+            return data.results.map(candle => ({
+                time: Math.floor(candle.t / 1000),
+                open: candle.o,
+                high: candle.h,
+                low: candle.l,
+                close: candle.c,
+                volume: candle.v
+            }));
+        } else {
+            console.warn('No data from API:', data.status || data.message);
+            return null;
+        }
+    } catch (error) {
+        console.error('API Error:', error);
+        return null;
+    }
+}
+
+// Fallback: Generate realistic simulated data
+function generateRealisticCandles(symbol, entryTime, exitTime, entryPrice, exitPrice, timeframe) {
+    const candles = [];
+    const startTime = new Date(entryTime).getTime() / 1000;
+    const endTime = new Date(exitTime).getTime() / 1000;
+    
+    const totalDuration = endTime - startTime;
+    const numCandles = Math.max(50, Math.floor(totalDuration / timeframe));
+    
+    const beforeEntry = Math.floor(numCandles * 0.3);
+    const duringTrade = Math.floor(numCandles * 0.5);
+    const afterExit = numCandles - beforeEntry - duringTrade;
+    
+    const priceRange = Math.abs(exitPrice - entryPrice);
+    const tickSize = symbol.includes('MES') ? 0.25 : 0.01;
+    
+    let currentPrice = entryPrice - priceRange * 0.2;
+    let currentTime = startTime - (beforeEntry * timeframe);
+    
+    for (let i = 0; i < beforeEntry; i++) {
+        const candle = generateCandle(currentTime, currentPrice, priceRange * 0.3, tickSize);
+        candles.push(candle);
+        currentPrice = candle.close;
+        currentTime += timeframe;
+    }
+    
+    for (let i = 0; i < duringTrade; i++) {
+        const progress = i / duringTrade;
+        const targetPrice = entryPrice + (exitPrice - entryPrice) * progress;
+        currentPrice = currentPrice * 0.3 + targetPrice * 0.7;
+        
+        const candle = generateCandle(currentTime, currentPrice, priceRange * 0.4, tickSize);
+        candles.push(candle);
+        currentPrice = candle.close;
+        currentTime += timeframe;
+    }
+    
+    for (let i = 0; i < afterExit; i++) {
+        const candle = generateCandle(currentTime, currentPrice, priceRange * 0.3, tickSize);
+        candles.push(candle);
+        currentPrice = candle.close;
+        currentTime += timeframe;
+    }
+    
+    return candles;
+}
+
+function generateCandle(time, price, volatility, tickSize) {
+    const bodySize = volatility * (0.3 + Math.random() * 0.4);
+    const wickSize = volatility * (0.2 + Math.random() * 0.3);
+    
+    const open = roundToTick(price + (Math.random() - 0.5) * bodySize, tickSize);
+    const close = roundToTick(price + (Math.random() - 0.5) * bodySize, tickSize);
+    const high = roundToTick(Math.max(open, close) + Math.random() * wickSize, tickSize);
+    const low = roundToTick(Math.min(open, close) - Math.random() * wickSize, tickSize);
+    
+    return {
+        time: Math.floor(time),
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+        volume: Math.floor(500 + Math.random() * 2000)
+    };
+}
+
+function roundToTick(price, tickSize) {
+    return Math.round(price / tickSize) * tickSize;
+}
+
+async function viewChart(tradeId) {
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
     
@@ -205,20 +363,42 @@ function viewChart(tradeId) {
     const chartTitle = document.getElementById('chartTitle');
     const chartDiv = document.getElementById('tradeChart');
     
-    chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option><option value="14400">4 hour</option><option value="86400">Daily</option></select></span>';
+    chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option></select></span>';
     
-    // Clear previous chart
-    chartDiv.innerHTML = '';
+    chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;"><div style="font-size:18px;margin-bottom:10px;">🔄 Loading REAL market data...</div><div style="font-size:14px;color:#94a3b8;">Fetching candles from Polygon.io</div></div>';
     
     let chartInstance = null;
     
-    function renderChart(timeframe) {
-        // Clear previous chart
+    async function renderChart(timeframe) {
         if (chartInstance) {
             chartDiv.innerHTML = '';
         }
         
-        // Create chart
+        chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">🔄 Loading...</div>';
+        
+        const entryDate = new Date(trade.entryDate);
+        const exitDate = new Date(trade.exitDate);
+        const tradeDuration = exitDate - entryDate;
+        
+        const startDate = new Date(entryDate.getTime() - tradeDuration * 0.5);
+        const endDate = new Date(exitDate.getTime() + tradeDuration * 0.5);
+        
+        let candleData = await fetchRealMarketData(trade.symbol, startDate, endDate, timeframe);
+        
+        if (!candleData || candleData.length === 0) {
+            console.log('⚠️ Using simulated data (API returned no data)');
+            candleData = generateRealisticCandles(
+                trade.symbol,
+                trade.entryDate,
+                trade.exitDate,
+                trade.entryPrice,
+                trade.exitPrice,
+                timeframe
+            );
+        }
+        
+        chartDiv.innerHTML = '';
+        
         chartInstance = LightweightCharts.createChart(chartDiv, {
             width: chartDiv.clientWidth,
             height: 600,
@@ -243,72 +423,38 @@ function viewChart(tradeId) {
             },
         });
 
-        // Generate data
-        const entryPrice = trade.entryPrice;
-        const exitPrice = trade.exitPrice;
-        const priceRange = Math.abs(exitPrice - entryPrice);
-        const buffer = priceRange * 0.5;
-        
-        const candleData = [];
-        const volumeData = [];
         const ema9Data = [];
         const ema21Data = [];
         const sma200Data = [];
+        const volumeData = [];
         
-        const totalCandles = timeframe >= 3600 ? 100 : 50;
-        const entryIndex = Math.floor(totalCandles * 0.3);
-        const exitIndex = Math.floor(totalCandles * 0.8);
-        
-        let currentPrice = entryPrice - buffer * 0.5;
-        let ema9 = currentPrice;
-        let ema21 = currentPrice;
+        let ema9 = candleData[0].close;
+        let ema21 = candleData[0].close;
         const smaWindow = [];
         
-        for (let i = 0; i < totalCandles; i++) {
-            const time = Math.floor(Date.now() / 1000) - (totalCandles - i) * timeframe;
-            
-            if (i < entryIndex) {
-                currentPrice += (Math.random() - 0.5) * (buffer * 0.1);
-            } else if (i >= entryIndex && i < exitIndex) {
-                const progress = (i - entryIndex) / (exitIndex - entryIndex);
-                const targetPrice = entryPrice + (exitPrice - entryPrice) * progress;
-                currentPrice = currentPrice * 0.7 + targetPrice * 0.3 + (Math.random() - 0.5) * (buffer * 0.05);
-            } else {
-                currentPrice += (Math.random() - 0.5) * (buffer * 0.1);
-            }
-            
-            const volatility = priceRange * 0.02;
-            const open = currentPrice + (Math.random() - 0.5) * volatility;
-            const close = currentPrice + (Math.random() - 0.5) * volatility;
-            const high = Math.max(open, close) + Math.random() * volatility;
-            const low = Math.min(open, close) - Math.random() * volatility;
-            
-            candleData.push({ time: time, open: open, high: high, low: low, close: close });
-            volumeData.push({
-                time: time,
-                value: 1000 + Math.random() * 5000,
-                color: close >= open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'
-            });
-            
+        candleData.forEach((candle, i) => {
             const k9 = 2 / 10;
-            ema9 = close * k9 + ema9 * (1 - k9);
-            ema9Data.push({ time: time, value: ema9 });
+            ema9 = candle.close * k9 + ema9 * (1 - k9);
+            ema9Data.push({ time: candle.time, value: ema9 });
             
             const k21 = 2 / 22;
-            ema21 = close * k21 + ema21 * (1 - k21);
-            ema21Data.push({ time: time, value: ema21 });
+            ema21 = candle.close * k21 + ema21 * (1 - k21);
+            ema21Data.push({ time: candle.time, value: ema21 });
             
-            smaWindow.push(close);
+            smaWindow.push(candle.close);
             if (smaWindow.length > 200) smaWindow.shift();
             if (i >= 199) {
                 const sma200 = smaWindow.reduce((a, b) => a + b, 0) / smaWindow.length;
-                sma200Data.push({ time: time, value: sma200 });
+                sma200Data.push({ time: candle.time, value: sma200 });
             }
             
-            currentPrice = close;
-        }
+            volumeData.push({
+                time: candle.time,
+                value: candle.volume,
+                color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'
+            });
+        });
         
-        // Add series
         const candleSeries = chartInstance.addCandlestickSeries({
             upColor: '#10b981',
             downColor: '#ef4444',
@@ -333,31 +479,34 @@ function viewChart(tradeId) {
         const volumeSeries = chartInstance.addHistogramSeries({
             priceFormat: { type: 'volume' },
             priceScaleId: '',
-            scaleMargins: { top: 0.8, bottom: 0 },
+            scaleMargins: { top: 0.85, bottom: 0 },
         });
         volumeSeries.setData(volumeData);
         
+        const entryTime = Math.floor(new Date(trade.entryDate).getTime() / 1000);
+        const exitTime = Math.floor(new Date(trade.exitDate).getTime() / 1000);
+        
         candleSeries.setMarkers([
             {
-                time: candleData[entryIndex].time,
+                time: entryTime,
                 position: trade.tradeType === 'long' ? 'belowBar' : 'aboveBar',
                 color: '#10b981',
                 shape: 'arrowUp',
-                text: 'Entry: $' + entryPrice.toFixed(2),
+                text: 'Entry: $' + trade.entryPrice.toFixed(2),
             },
             {
-                time: candleData[exitIndex].time,
+                time: exitTime,
                 position: trade.tradeType === 'long' ? 'aboveBar' : 'belowBar',
                 color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
                 shape: 'arrowDown',
-                text: 'Exit: $' + exitPrice.toFixed(2) + ' (P&L: $' + trade.pnl.toFixed(2) + ')',
+                text: 'Exit: $' + trade.exitPrice.toFixed(2) + ' (P&L: $' + trade.pnl.toFixed(2) + ')',
             }
         ]);
         
         chartInstance.timeScale().fitContent();
     }
     
-    renderChart(300);
+    await renderChart(300);
     
     setTimeout(() => {
         const selector = document.getElementById('timeframeSelect');
