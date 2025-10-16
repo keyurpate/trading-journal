@@ -5,7 +5,7 @@ let polygonApiKey = localStorage.getItem('polygonApiKey') || 'e329C3pUBVi1hwvO3W
 
 // Current edit trade
 let currentEditTradeId = null;
-let currentChartTradeId = null;
+let currentScreenshotDataURL = null;
 
 // Calendar state
 let currentCalendarMonth = new Date().getMonth();
@@ -33,7 +33,6 @@ function setupEventListeners() {
     document.getElementById('playbookFilter').addEventListener('change', filterTrades);
     document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
     
-    // Modal close handlers
     const modal = document.getElementById('chartModal');
     const closeBtn = document.querySelector('.close');
     
@@ -68,7 +67,6 @@ function saveApiKey() {
     }
 }
 
-// CSV Import with grouping
 function importCsv() {
     const fileInput = document.getElementById('csvFileInput');
     const file = fileInput.files[0];
@@ -105,7 +103,6 @@ function importCsv() {
         
         allOrders.reverse();
         
-        // Group by time
         const groupedOrders = [];
         
         for (let i = 0; i < allOrders.length; i++) {
@@ -139,8 +136,6 @@ function importCsv() {
                 });
             }
         }
-        
-        console.log('Grouped orders:', groupedOrders);
         
         const parsedTrades = [];
         let currentPosition = null;
@@ -217,8 +212,6 @@ function importCsv() {
             });
         }
         
-        console.log('Parsed trades:', parsedTrades);
-        
         trades = [...trades, ...parsedTrades];
         localStorage.setItem('trades', JSON.stringify(trades));
         
@@ -241,7 +234,6 @@ function calculatePnL(entry, exit) {
         pnl = (entry.price - exit.price) * entry.quantity;
     }
     
-    // MNQ multiplier is $2 per point, MES is $5 per point
     if (entry.instrument.includes('MNQ')) {
         pnl = pnl * 2;
     } else if (entry.instrument.includes('MES')) {
@@ -252,7 +244,6 @@ function calculatePnL(entry, exit) {
 }
 
 function updateFilters() {
-    // Update account filter
     const accountFilter = document.getElementById('accountFilter');
     const uniqueAccounts = [...new Set(trades.map(t => t.account))];
     accountFilter.innerHTML = '<option value="all">All Accounts</option>';
@@ -263,7 +254,6 @@ function updateFilters() {
         accountFilter.appendChild(option);
     });
     
-    // Update playbook filter
     const playbookFilter = document.getElementById('playbookFilter');
     const uniquePlaybooks = [...new Set(trades.map(t => t.playbook).filter(p => p))];
     playbookFilter.innerHTML = '<option value="all">All Playbooks</option>';
@@ -279,7 +269,6 @@ function filterTrades() {
     currentAccountFilter = document.getElementById('accountFilter').value;
     currentPlaybookFilter = document.getElementById('playbookFilter').value;
     
-    // Update calendar when filters change
     renderCalendar();
     loadTrades(currentAccountFilter, currentPlaybookFilter);
 }
@@ -296,7 +285,6 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all', filterDate = 
         filteredTrades = filteredTrades.filter(t => t.playbook === filterPlaybook);
     }
     
-    // ADDED: Filter by date if provided (from calendar click)
     if (filterDate) {
         filteredTrades = filteredTrades.filter(t => {
             const date = new Date(t.entryDate);
@@ -332,7 +320,6 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all', filterDate = 
         html += '<div style="color: #666; font-size: 14px; margin-top: 5px;">' + trade.tradeType.toUpperCase() + ' | ' + trade.account + '</div></div>';
         html += '<div class="trade-pnl ' + (trade.pnl >= 0 ? 'profit' : 'loss') + '">' + (trade.pnl >= 0 ? '+' : '') + '$' + trade.pnl.toFixed(2) + '</div></div>';
         
-        // Ratings
         if (trade.entryRating || trade.exitRating || trade.disciplineRating) {
             html += '<div class="trade-ratings">';
             if (trade.entryRating) {
@@ -347,7 +334,6 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all', filterDate = 
             html += '</div>';
         }
         
-        // Tags and Mistakes
         if (trade.tags && trade.tags.length > 0) {
             html += '<div class="trade-tags">';
             trade.tags.forEach(tag => {
@@ -370,12 +356,10 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all', filterDate = 
         html += '<div class="trade-detail">Quantity<span>' + trade.quantity + '</span></div>';
         html += '</div>';
         
-        // Notes
         if (trade.notes) {
             html += '<div class="trade-notes"><strong>📝 Notes:</strong> ' + trade.notes + '</div>';
         }
         
-        // Screenshot
         if (trade.screenshot) {
             html += '<div style="margin-bottom: 15px;"><img src="' + trade.screenshot + '" style="max-width: 100%; border-radius: 10px; cursor: pointer;" onclick="window.open(\'' + trade.screenshot + '\', \'_blank\')" onerror="this.style.display=\'none\'"></div>';
         }
@@ -412,21 +396,39 @@ function deleteTrade(id) {
     }
 }
 
-// Edit Trade Modal
 function editTrade(tradeId) {
     currentEditTradeId = tradeId;
+    currentScreenshotDataURL = null;
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
     
     const modal = document.getElementById('editTradeModal');
     
-    // Populate form
     document.getElementById('editPlaybook').value = trade.playbook || '';
     document.getElementById('editTags').value = trade.tags ? trade.tags.join(', ') : '';
     document.getElementById('editNotes').value = trade.notes || '';
     document.getElementById('editScreenshot').value = trade.screenshot || '';
+    document.getElementById('editScreenshotFile').value = '';
     
-    // Set ratings
+    const preview = document.getElementById('screenshotPreview');
+    if (trade.screenshot) {
+        preview.innerHTML = '<img src="' + trade.screenshot + '" alt="Current Screenshot">';
+    } else {
+        preview.innerHTML = '';
+    }
+    
+    document.getElementById('editScreenshotFile').onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentScreenshotDataURL = event.target.result;
+                preview.innerHTML = '<img src="' + currentScreenshotDataURL + '" alt="Screenshot Preview">';
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
     document.querySelectorAll('.rating-btn').forEach(btn => {
         btn.classList.remove('selected');
         const type = btn.dataset.type;
@@ -437,12 +439,10 @@ function editTrade(tradeId) {
         if (type === 'discipline' && trade.disciplineRating === rating) btn.classList.add('selected');
     });
     
-    // Set mistakes
     document.querySelectorAll('.mistake-check').forEach(check => {
         check.checked = trade.mistakes && trade.mistakes.includes(check.value);
     });
     
-    // Setup rating buttons
     document.querySelectorAll('.rating-btn').forEach(btn => {
         btn.onclick = function() {
             const type = this.dataset.type;
@@ -451,12 +451,10 @@ function editTrade(tradeId) {
         };
     });
     
-    // Save button
     document.getElementById('saveTradeBtn').onclick = function() {
         saveTrade();
     };
     
-    // Close button
     const closeBtn = document.querySelector('.close-edit');
     closeBtn.onclick = function() {
         modal.style.display = 'none';
@@ -472,9 +470,13 @@ function saveTrade() {
     trade.playbook = document.getElementById('editPlaybook').value;
     trade.tags = document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(t => t);
     trade.notes = document.getElementById('editNotes').value;
-    trade.screenshot = document.getElementById('editScreenshot').value;
     
-    // Get ratings
+    if (currentScreenshotDataURL) {
+        trade.screenshot = currentScreenshotDataURL;
+    } else {
+        trade.screenshot = document.getElementById('editScreenshot').value;
+    }
+    
     const selectedEntry = document.querySelector('.rating-btn[data-type="entry"].selected');
     const selectedExit = document.querySelector('.rating-btn[data-type="exit"].selected');
     const selectedDiscipline = document.querySelector('.rating-btn[data-type="discipline"].selected');
@@ -483,7 +485,6 @@ function saveTrade() {
     trade.exitRating = selectedExit ? parseInt(selectedExit.dataset.rating) : 0;
     trade.disciplineRating = selectedDiscipline ? parseInt(selectedDiscipline.dataset.rating) : 0;
     
-    // Get mistakes
     trade.mistakes = [];
     document.querySelectorAll('.mistake-check:checked').forEach(check => {
         trade.mistakes.push(check.value);
@@ -500,7 +501,6 @@ function saveTrade() {
     alert('✅ Trade updated successfully!');
 }
 
-// Calendar Functions
 function setupCalendar() {
     document.getElementById('prevMonth').addEventListener('click', () => {
         currentCalendarMonth--;
@@ -542,7 +542,6 @@ function renderCalendar() {
     
     title.textContent = monthNames[currentCalendarMonth] + ' ' + currentCalendarYear;
     
-    // Filter trades by current account filter
     let filteredTrades = trades;
     if (currentAccountFilter !== 'all') {
         filteredTrades = filteredTrades.filter(t => t.account === currentAccountFilter);
@@ -561,7 +560,6 @@ function renderCalendar() {
                        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
                        String(date.getDate()).padStart(2, '0');
         
-        // Calculate monthly total
         if (date.getMonth() === currentCalendarMonth && date.getFullYear() === currentCalendarYear) {
             monthlyTotal += trade.pnl;
         }
@@ -574,7 +572,6 @@ function renderCalendar() {
         dailyTrades[dateKey].push(trade);
     });
     
-    // ADDED: Display monthly P&L
     monthlyPnLElement.textContent = 'Monthly P&L: ' + (monthlyTotal >= 0 ? '+' : '') + '$' + monthlyTotal.toFixed(2);
     monthlyPnLElement.className = monthlyTotal >= 0 ? 'profit' : 'loss';
     
@@ -616,7 +613,6 @@ function renderCalendar() {
             classes += ' today';
         }
         
-        // CHANGED: Click calendar day to show trades below (not modal)
         html += '<div class="' + classes + '" onclick="loadTradesByDate(\'' + dateKey + '\')">';
         html += '<div class="day-number">' + day + '</div>';
         if (pnl !== 0) {
@@ -638,27 +634,22 @@ function renderCalendar() {
     calendar.innerHTML = html;
 }
 
-// ADDED: Load trades by date (show below when calendar day clicked)
 function loadTradesByDate(dateKey) {
     const date = new Date(dateKey);
     const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     
-    // Scroll to trades section
     document.getElementById('tradesContainer').scrollIntoView({ behavior: 'smooth' });
     
-    // Show notification
     const notification = document.createElement('div');
     notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #667eea; color: white; padding: 15px 25px; border-radius: 10px; z-index: 10000; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3);';
     notification.textContent = '📅 Showing trades for ' + dateStr;
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
     
-    // Load trades for this date
     loadTrades(currentAccountFilter, currentPlaybookFilter, dateKey);
 }
 
 function showDayTrades(dateKey) {
-    // Filter trades for this day
     let dayTrades = trades.filter(trade => {
         const date = new Date(trade.entryDate);
         const tradeKey = date.getFullYear() + '-' + 
@@ -693,7 +684,6 @@ function showDayTrades(dateKey) {
     
     title.innerHTML = '📅 ' + dateStr;
     
-    // Day summary
     let html = '<div class="day-summary">';
     html += '<div class="day-summary-item"><h3>Total Trades</h3><p>' + dayTrades.length + '</p></div>';
     html += '<div class="day-summary-item"><h3>Wins / Losses</h3><p>' + wins + ' / ' + losses + '</p></div>';
@@ -701,7 +691,6 @@ function showDayTrades(dateKey) {
     html += '<div class="day-summary-item"><h3>Total P&L</h3><p style="color:' + (totalPnL >= 0 ? '#d1fae5' : '#fee2e2') + '">' + (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</p></div>';
     html += '</div>';
     
-    // Individual trades
     dayTrades.forEach(trade => {
         html += '<div class="day-trade-item">';
         html += '<div class="day-trade-info">';
@@ -761,7 +750,6 @@ function deleteDayTrades(dateKey) {
     }
 }
 
-// Polygon API Functions
 function getPolygonTicker(symbol) {
     if (symbol.includes('MES')) return 'I:MES';
     if (symbol.includes('MNQ')) return 'I:NQ';
@@ -891,48 +879,9 @@ function closeModal() {
     document.getElementById('chartModal').style.display = 'none';
 }
 
-// ADDED: Screenshot capture function
-async function captureChartScreenshot() {
-    const chartDiv = document.getElementById('tradeChart');
-    const trade = trades.find(t => t.id === currentChartTradeId);
-    
-    if (!trade) {
-        alert('Trade not found');
-        return;
-    }
-    
-    try {
-        const canvas = await html2canvas(chartDiv, {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            logging: false
-        });
-        
-        // Convert to blob
-        canvas.toBlob(function(blob) {
-            // Create download link
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = trade.symbol + '_' + new Date(trade.entryDate).toISOString().split('T')[0] + '_chart.png';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            alert('📸 Screenshot saved! Upload it to Imgur and paste the URL in Edit Trade.');
-        });
-    } catch (error) {
-        console.error('Screenshot error:', error);
-        alert('❌ Error capturing screenshot. Please try again.');
-    }
-}
-
 async function viewChart(tradeId) {
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
-    
-    currentChartTradeId = tradeId;
     
     const modal = document.getElementById('chartModal');
     const chartTitle = document.getElementById('chartTitle');
@@ -941,9 +890,6 @@ async function viewChart(tradeId) {
     chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option></select></span>';
     
     chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">🔄 Loading real market data...</div>';
-    
-    // Setup capture button
-    document.getElementById('captureChartBtn').onclick = captureChartScreenshot;
     
     let chartInstance = null;
     
@@ -954,25 +900,44 @@ async function viewChart(tradeId) {
         
         chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">Loading...</div>';
         
-        // FIXED: Parse date correctly (NinjaTrader uses local time)
-        const parseTradeDate = (dateStr) => {
-            // Format: "10/16/2025 9:42:14 AM"
+        const parseNTDate = (dateStr) => {
             const date = new Date(dateStr);
+            
+            if (isNaN(date.getTime())) {
+                const parts = dateStr.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)\s+(AM|PM)/);
+                if (parts) {
+                    let hour = parseInt(parts[4]);
+                    if (parts[7] === 'PM' && hour !== 12) hour += 12;
+                    if (parts[7] === 'AM' && hour === 12) hour = 0;
+                    
+                    return new Date(
+                        parseInt(parts[3]),
+                        parseInt(parts[1]) - 1,
+                        parseInt(parts[2]),
+                        hour,
+                        parseInt(parts[5]),
+                        parseInt(parts[6])
+                    );
+                }
+            }
+            
             return date;
         };
         
-        const entryDate = parseTradeDate(trade.entryDate);
-        const exitDate = parseTradeDate(trade.exitDate);
+        const entryDate = parseNTDate(trade.entryDate);
+        const exitDate = parseNTDate(trade.exitDate);
         const tradeDuration = exitDate - entryDate;
         
         const startDate = new Date(entryDate.getTime() - tradeDuration * 1);
         const endDate = new Date(exitDate.getTime() + tradeDuration * 0.5);
         
-        console.log('=== TRADE TIMES ===');
-        console.log('Entry:', entryDate.toLocaleString());
-        console.log('Exit:', exitDate.toLocaleString());
-        console.log('Entry timestamp:', Math.floor(entryDate.getTime() / 1000));
-        console.log('Exit timestamp:', Math.floor(exitDate.getTime() / 1000));
+        console.log('=== TRADE TIMES (FIXED) ===');
+        console.log('Entry CSV:', trade.entryDate);
+        console.log('Entry Parsed:', entryDate.toLocaleString());
+        console.log('Entry Unix:', Math.floor(entryDate.getTime() / 1000));
+        console.log('Exit CSV:', trade.exitDate);
+        console.log('Exit Parsed:', exitDate.toLocaleString());
+        console.log('Exit Unix:', Math.floor(exitDate.getTime() / 1000));
         
         let candleData = await fetchRealMarketData(trade.symbol, startDate, endDate, timeframe);
         
@@ -1060,14 +1025,12 @@ async function viewChart(tradeId) {
             sma200Series.setData(sma200Data);
         }
         
-        // REMOVED VOLUME
-        
-        // FIXED: Use exact timestamps from parsed dates
         const entryTimestamp = Math.floor(entryDate.getTime() / 1000);
         const exitTimestamp = Math.floor(exitDate.getTime() / 1000);
         
-        console.log('Looking for candles near entry:', entryTimestamp, '=', new Date(entryTimestamp * 1000).toLocaleString());
-        console.log('Looking for candles near exit:', exitTimestamp, '=', new Date(exitTimestamp * 1000).toLocaleString());
+        console.log('Searching for candles near:');
+        console.log('  Entry:', new Date(entryTimestamp * 1000).toLocaleString());
+        console.log('  Exit:', new Date(exitTimestamp * 1000).toLocaleString());
         
         const entryCandle = candleData.reduce((prev, curr) => 
             Math.abs(curr.time - entryTimestamp) < Math.abs(prev.time - entryTimestamp) ? curr : prev
@@ -1077,8 +1040,9 @@ async function viewChart(tradeId) {
             Math.abs(curr.time - exitTimestamp) < Math.abs(prev.time - exitTimestamp) ? curr : prev
         );
         
-        console.log('Entry candle found at:', new Date(entryCandle.time * 1000).toLocaleString());
-        console.log('Exit candle found at:', new Date(exitCandle.time * 1000).toLocaleString());
+        console.log('Found candles at:');
+        console.log('  Entry:', new Date(entryCandle.time * 1000).toLocaleString());
+        console.log('  Exit:', new Date(exitCandle.time * 1000).toLocaleString());
         
         candleSeries.setMarkers([
             {
