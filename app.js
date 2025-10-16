@@ -203,137 +203,224 @@ function viewChart(tradeId) {
     
     const modal = document.getElementById('chartModal');
     const chartTitle = document.getElementById('chartTitle');
+    const chartDiv = document.getElementById('tradeChart');
     
-    chartTitle.textContent = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade';
+    chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect" style="padding: 8px 15px; border-radius: 8px; border: 2px solid #cbd5e1; background: white; cursor: pointer;"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option><option value="14400">4 hour</option><option value="86400">Daily</option></select></span>';
     
     // Clear previous chart
-    const chartCanvas = document.getElementById('tradeChart');
-    const ctx = chartCanvas.getContext('2d');
+    chartDiv.innerHTML = '';
     
-    // Destroy previous chart instance if exists
-    if (window.currentChart) {
-        window.currentChart.destroy();
-    }
+    let currentChart = null;
     
-    // Generate simulated price data around entry/exit
-    const entryPrice = trade.entryPrice;
-    const exitPrice = trade.exitPrice;
-    const priceRange = Math.abs(exitPrice - entryPrice);
-    const buffer = priceRange * 0.3;
-    
-    const dataPoints = 50;
-    const labels = [];
-    const prices = [];
-    
-    const entryIndex = 15;
-    const exitIndex = 40;
-    
-    for (let i = 0; i < dataPoints; i++) {
-        labels.push('');
+    function renderChart(timeframe) {
+        // Clear previous chart instance
+        if (currentChart) {
+            chartDiv.innerHTML = '';
+        }
         
-        if (i < entryIndex) {
-            // Before entry - random walk
-            prices.push(entryPrice + (Math.random() - 0.5) * buffer);
-        } else if (i >= entryIndex && i < exitIndex) {
-            // Between entry and exit - trend towards exit
-            const progress = (i - entryIndex) / (exitIndex - entryIndex);
-            const trendPrice = entryPrice + (exitPrice - entryPrice) * progress;
-            prices.push(trendPrice + (Math.random() - 0.5) * (buffer * 0.5));
-        } else {
-            // After exit
-            prices.push(exitPrice + (Math.random() - 0.5) * buffer);
+        // Create chart
+        currentChart = LightweightCharts.createChart(chartDiv, {
+            width: chartDiv.clientWidth,
+            height: 600,
+            layout: {
+                background: { color: '#ffffff' },
+                textColor: '#333',
+            },
+            grid: {
+                vertLines: { color: '#f0f0f0' },
+                horzLines: { color: '#f0f0f0' },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+                borderColor: '#d1d4dc',
+            },
+            timeScale: {
+                borderColor: '#d1d4dc',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+        });
+
+        // Generate candlestick data
+        const entryPrice = trade.entryPrice;
+        const exitPrice = trade.exitPrice;
+        const priceRange = Math.abs(exitPrice - entryPrice);
+        const buffer = priceRange * 0.5;
+        
+        const candleData = [];
+        const volumeData = [];
+        const ema9Data = [];
+        const ema21Data = [];
+        const sma200Data = [];
+        
+        const totalCandles = timeframe >= 3600 ? 100 : 50; // More candles for larger timeframes
+        const entryIndex = Math.floor(totalCandles * 0.3);
+        const exitIndex = Math.floor(totalCandles * 0.8);
+        
+        let currentPrice = entryPrice - buffer * 0.5;
+        let ema9 = currentPrice;
+        let ema21 = currentPrice;
+        const smaWindow = [];
+        
+        for (let i = 0; i < totalCandles; i++) {
+            const time = Math.floor(Date.now() / 1000) - (totalCandles - i) * timeframe;
+            
+            // Generate price movement
+            if (i < entryIndex) {
+                currentPrice += (Math.random() - 0.5) * (buffer * 0.1);
+            } else if (i >= entryIndex && i < exitIndex) {
+                const progress = (i - entryIndex) / (exitIndex - entryIndex);
+                const targetPrice = entryPrice + (exitPrice - entryPrice) * progress;
+                currentPrice = currentPrice * 0.7 + targetPrice * 0.3 + (Math.random() - 0.5) * (buffer * 0.05);
+            } else {
+                currentPrice += (Math.random() - 0.5) * (buffer * 0.1);
+            }
+            
+            // Generate OHLC
+            const volatility = priceRange * 0.02;
+            const open = currentPrice + (Math.random() - 0.5) * volatility;
+            const close = currentPrice + (Math.random() - 0.5) * volatility;
+            const high = Math.max(open, close) + Math.random() * volatility;
+            const low = Math.min(open, close) - Math.random() * volatility;
+            
+            candleData.push({
+                time: time,
+                open: open,
+                high: high,
+                low: low,
+                close: close
+            });
+            
+            // Generate volume
+            volumeData.push({
+                time: time,
+                value: 1000 + Math.random() * 5000,
+                color: close >= open ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'
+            });
+            
+            // Calculate 9 EMA
+            const k9 = 2 / (9 + 1);
+            ema9 = close * k9 + ema9 * (1 - k9);
+            ema9Data.push({
+                time: time,
+                value: ema9
+            });
+            
+            // Calculate 21 EMA
+            const k21 = 2 / (21 + 1);
+            ema21 = close * k21 + ema21 * (1 - k21);
+            ema21Data.push({
+                time: time,
+                value: ema21
+            });
+            
+            // Calculate 200 SMA
+            smaWindow.push(close);
+            if (smaWindow.length > 200) {
+                smaWindow.shift();
+            }
+            if (i >= 199) {
+                const sma200 = smaWindow.reduce((a, b) => a + b, 0) / smaWindow.length;
+                sma200Data.push({
+                    time: time,
+                    value: sma200
+                });
+            }
+            
+            currentPrice = close;
         }
+        
+        // Add candlestick series
+        const candleSeries = currentChart.addCandlestickSeries({
+            upColor: '#10b981',
+            downColor: '#ef4444',
+            borderUpColor: '#10b981',
+            borderDownColor: '#ef4444',
+            wickUpColor: '#10b981',
+            wickDownColor: '#ef4444',
+        });
+        candleSeries.setData(candleData);
+        
+        // Add 9 EMA line (purple)
+        const ema9Series = currentChart.addLineSeries({
+            color: '#8b5cf6',
+            lineWidth: 2,
+            title: '9 EMA',
+        });
+        ema9Series.setData(ema9Data);
+        
+        // Add 21 EMA line (orange)
+        const ema21Series = currentChart.addLineSeries({
+            color: '#f97316',
+            lineWidth: 2,
+            title: '21 EMA',
+        });
+        ema21Series.setData(ema21Data);
+        
+        // Add 200 SMA line (blue)
+        if (sma200Data.length > 0) {
+            const sma200Series = currentChart.addLineSeries({
+                color: '#3b82f6',
+                lineWidth: 2,
+                title: '200 SMA',
+            });
+            sma200Series.setData(sma200Data);
+        }
+        
+        // Add volume histogram
+        const volumeSeries = currentChart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: '',
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0,
+            },
+        });
+        volumeSeries.setData(volumeData);
+        
+        // Add entry/exit markers
+        candleSeries.setMarkers([
+            {
+                time: candleData[entryIndex].time,
+                position: trade.tradeType === 'long' ? 'belowBar' : 'aboveBar',
+                color: trade.tradeType === 'long' ? '#10b981' : '#ef4444',
+                shape: 'arrowUp',
+                text: 'Entry: $' + entryPrice.toFixed(2),
+            },
+            {
+                time: candleData[exitIndex].time,
+                position: trade.tradeType === 'long' ? 'aboveBar' : 'belowBar',
+                color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
+                shape: 'arrowDown',
+                text: 'Exit: $' + exitPrice.toFixed(2) + ' (' + (trade.pnl >= 0 ? '+' : '') + '$' + trade.pnl.toFixed(2) + ')',
+            }
+        ]);
+        
+        // Fit content
+        currentChart.timeScale().fitContent();
+        
+        // Handle window resize
+        const resizeHandler = () => {
+            currentChart.applyOptions({ width: chartDiv.clientWidth });
+        };
+        window.removeEventListener('resize', resizeHandler);
+        window.addEventListener('resize', resizeHandler);
     }
     
-    // Create chart
-    window.currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Price',
-                data: prices,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                borderWidth: 2,
-                tension: 0.4,
-                pointRadius: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return '$' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                },
-                annotation: {
-                    annotations: {
-                        entryLine: {
-                            type: 'line',
-                            yMin: entryPrice,
-                            yMax: entryPrice,
-                            borderColor: trade.tradeType === 'long' ? '#10b981' : '#ef4444',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            label: {
-                                display: true,
-                                content: 'Entry: $' + entryPrice.toFixed(2),
-                                position: 'start'
-                            }
-                        },
-                        exitLine: {
-                            type: 'line',
-                            yMin: exitPrice,
-                            yMax: exitPrice,
-                            borderColor: trade.pnl >= 0 ? '#10b981' : '#ef4444',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            label: {
-                                display: true,
-                                content: 'Exit: $' + exitPrice.toFixed(2),
-                                position: 'end'
-                            }
-                        },
-                        entryPoint: {
-                            type: 'point',
-                            xValue: entryIndex,
-                            yValue: entryPrice,
-                            backgroundColor: trade.tradeType === 'long' ? '#10b981' : '#ef4444',
-                            radius: 8,
-                            borderWidth: 2,
-                            borderColor: 'white'
-                        },
-                        exitPoint: {
-                            type: 'point',
-                            xValue: exitIndex,
-                            yValue: exitPrice,
-                            backgroundColor: trade.pnl >= 0 ? '#10b981' : '#ef4444',
-                            radius: 8,
-                            borderWidth: 2,
-                            borderColor: 'white'
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value.toFixed(2);
-                        }
-                    }
-                }
-            }
-        }
-    });
+    // Initial render with 5min timeframe
+    renderChart(300);
+    
+    // Timeframe change handler
+    setTimeout(() => {
+        document.getElementById('timeframeSelect').addEventListener('change', function(e) {
+            renderChart(parseInt(e.target.value));
+        });
+    }, 100);
     
     modal.style.display = 'block';
 }
