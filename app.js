@@ -20,12 +20,16 @@ function setupEventListeners() {
     document.getElementById('accountFilter').addEventListener('change', filterByAccount);
     document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
     
-    // Modal close
+    // Modal close - FIXED
     const modal = document.getElementById('chartModal');
     const closeBtn = document.querySelector('.close');
-    closeBtn.onclick = function() {
-        modal.style.display = 'none';
+    
+    if (closeBtn) {
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
     }
+    
     window.onclick = function(event) {
         if (event.target == modal) {
             modal.style.display = 'none';
@@ -225,7 +229,6 @@ function deleteTrade(id) {
 
 // Convert NinjaTrader symbol to Polygon.io ticker
 function getPolygonTicker(symbol) {
-    // MES DEC25 -> I:MES (Micro E-mini S&P 500 Futures)
     if (symbol.includes('MES')) return 'I:MES';
     if (symbol.includes('ES')) return 'I:ES';
     if (symbol.includes('NQ')) return 'I:NQ';
@@ -243,7 +246,6 @@ async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
     
     const ticker = getPolygonTicker(symbol);
     
-    // Convert timeframe to Polygon format
     let multiplier = 1;
     let timespan = 'minute';
     if (timeframe === 60) { multiplier = 1; timespan = 'minute'; }
@@ -253,7 +255,6 @@ async function fetchRealMarketData(symbol, startDate, endDate, timeframe) {
     else if (timeframe === 14400) { multiplier = 4; timespan = 'hour'; }
     else if (timeframe === 86400) { multiplier = 1; timespan = 'day'; }
     
-    // Format dates for Polygon API (YYYY-MM-DD)
     const from = new Date(startDate).toISOString().split('T')[0];
     const to = new Date(endDate).toISOString().split('T')[0];
     
@@ -355,6 +356,11 @@ function roundToTick(price, tickSize) {
     return Math.round(price / tickSize) * tickSize;
 }
 
+function closeModal() {
+    const modal = document.getElementById('chartModal');
+    modal.style.display = 'none';
+}
+
 async function viewChart(tradeId) {
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
@@ -363,6 +369,7 @@ async function viewChart(tradeId) {
     const chartTitle = document.getElementById('chartTitle');
     const chartDiv = document.getElementById('tradeChart');
     
+    // Add close button that works
     chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option></select></span>';
     
     chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;"><div style="font-size:18px;margin-bottom:10px;">🔄 Loading REAL market data...</div><div style="font-size:14px;color:#94a3b8;">Fetching candles from Polygon.io</div></div>';
@@ -382,6 +389,10 @@ async function viewChart(tradeId) {
         
         const startDate = new Date(entryDate.getTime() - tradeDuration * 0.5);
         const endDate = new Date(exitDate.getTime() + tradeDuration * 0.5);
+        
+        console.log('Trade Entry:', entryDate.toLocaleString());
+        console.log('Trade Exit:', exitDate.toLocaleString());
+        console.log('Fetching data from:', startDate.toLocaleString(), 'to', endDate.toLocaleString());
         
         let candleData = await fetchRealMarketData(trade.symbol, startDate, endDate, timeframe);
         
@@ -419,7 +430,7 @@ async function viewChart(tradeId) {
             timeScale: {
                 borderColor: '#d1d4dc',
                 timeVisible: true,
-                secondsVisible: false,
+                secondsVisible: true,
             },
         });
 
@@ -476,26 +487,43 @@ async function viewChart(tradeId) {
             sma200Series.setData(sma200Data);
         }
         
+        // FIXED: Volume only 8% of chart height
         const volumeSeries = chartInstance.addHistogramSeries({
             priceFormat: { type: 'volume' },
             priceScaleId: '',
-            scaleMargins: { top: 0.85, bottom: 0 },
+            scaleMargins: { 
+                top: 0.92,  // Volume takes only bottom 8%
+                bottom: 0 
+            },
         });
         volumeSeries.setData(volumeData);
         
-        const entryTime = Math.floor(new Date(trade.entryDate).getTime() / 1000);
-        const exitTime = Math.floor(new Date(trade.exitDate).getTime() / 1000);
+        // FIXED: Use EXACT entry/exit times from CSV
+        const entryTimestamp = Math.floor(new Date(trade.entryDate).getTime() / 1000);
+        const exitTimestamp = Math.floor(new Date(trade.exitDate).getTime() / 1000);
+        
+        console.log('Entry marker at:', new Date(entryTimestamp * 1000).toLocaleString());
+        console.log('Exit marker at:', new Date(exitTimestamp * 1000).toLocaleString());
+        
+        // Find closest candles to entry/exit times
+        const entryCandle = candleData.reduce((prev, curr) => 
+            Math.abs(curr.time - entryTimestamp) < Math.abs(prev.time - entryTimestamp) ? curr : prev
+        );
+        
+        const exitCandle = candleData.reduce((prev, curr) => 
+            Math.abs(curr.time - exitTimestamp) < Math.abs(prev.time - exitTimestamp) ? curr : prev
+        );
         
         candleSeries.setMarkers([
             {
-                time: entryTime,
+                time: entryCandle.time,
                 position: trade.tradeType === 'long' ? 'belowBar' : 'aboveBar',
                 color: '#10b981',
                 shape: 'arrowUp',
                 text: 'Entry: $' + trade.entryPrice.toFixed(2),
             },
             {
-                time: exitTime,
+                time: exitCandle.time,
                 position: trade.tradeType === 'long' ? 'aboveBar' : 'belowBar',
                 color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
                 shape: 'arrowDown',
@@ -512,6 +540,14 @@ async function viewChart(tradeId) {
         const selector = document.getElementById('timeframeSelect');
         if (selector) {
             selector.addEventListener('change', (e) => renderChart(parseInt(e.target.value)));
+        }
+        
+        // Re-attach close button handler
+        const closeBtn = document.querySelector('.close');
+        if (closeBtn) {
+            closeBtn.onclick = function() {
+                closeModal();
+            }
         }
     }, 100);
     
