@@ -565,6 +565,7 @@ function renderCalendar() {
         const tradesCount = dailyTrades[dateKey] ? dailyTrades[dateKey].length : 0;
         
         let classes = 'calendar-day';
+        if (tradesCount > 0) classes += ' has-trades';
         if (pnl > 0) classes += ' profit';
         if (pnl < 0) classes += ' loss';
         if (today.getDate() === day && 
@@ -603,7 +604,10 @@ function showDayTrades(dateKey) {
         return tradeKey === dateKey;
     });
     
-    if (dayTrades.length === 0) return;
+    if (dayTrades.length === 0) {
+        alert('No trades found for this day');
+        return;
+    }
     
     const modal = document.getElementById('dayTradesModal');
     const title = document.getElementById('dayTradesTitle');
@@ -613,20 +617,29 @@ function showDayTrades(dateKey) {
     const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     
     const totalPnL = dayTrades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = dayTrades.filter(t => t.pnl > 0).length;
+    const losses = dayTrades.filter(t => t.pnl < 0).length;
+    const winRate = dayTrades.length > 0 ? ((wins / dayTrades.length) * 100).toFixed(1) : 0;
     
-    title.innerHTML = '📅 Trades for ' + dateStr + ' <span style="float:right;color:' + 
-                     (totalPnL >= 0 ? '#10b981' : '#ef4444') + '">Total: ' + 
-                     (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</span>';
+    title.innerHTML = '📅 ' + dateStr;
     
-    let html = '';
+    // Day summary
+    let html = '<div class="day-summary">';
+    html += '<div class="day-summary-item"><h3>Total Trades</h3><p>' + dayTrades.length + '</p></div>';
+    html += '<div class="day-summary-item"><h3>Wins / Losses</h3><p>' + wins + ' / ' + losses + '</p></div>';
+    html += '<div class="day-summary-item"><h3>Win Rate</h3><p>' + winRate + '%</p></div>';
+    html += '<div class="day-summary-item"><h3>Total P&L</h3><p style="color:' + (totalPnL >= 0 ? '#d1fae5' : '#fee2e2') + '">' + (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toFixed(2) + '</p></div>';
+    html += '</div>';
+    
+    // Individual trades
     dayTrades.forEach(trade => {
         html += '<div class="day-trade-item">';
         html += '<div class="day-trade-info">';
         html += '<div class="day-trade-symbol">' + trade.symbol + ' - ' + trade.tradeType.toUpperCase() + '</div>';
         html += '<div class="day-trade-details">';
-        html += 'Entry: $' + trade.entryPrice.toFixed(2) + ' → Exit: $' + trade.exitPrice.toFixed(2);
+        html += '🕐 ' + new Date(trade.entryDate).toLocaleTimeString();
+        html += ' | Entry: $' + trade.entryPrice.toFixed(2) + ' → Exit: $' + trade.exitPrice.toFixed(2);
         html += ' | Qty: ' + trade.quantity;
-        html += ' | ' + new Date(trade.entryDate).toLocaleTimeString();
         if (trade.playbook) html += ' | 📌 ' + trade.playbook;
         html += '</div></div>';
         html += '<div class="day-trade-pnl ' + (trade.pnl >= 0 ? 'profit' : 'loss') + '">';
