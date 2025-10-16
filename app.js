@@ -5,6 +5,7 @@ let polygonApiKey = localStorage.getItem('polygonApiKey') || 'e329C3pUBVi1hwvO3W
 
 // Current edit trade
 let currentEditTradeId = null;
+let currentChartTradeId = null;
 
 // Calendar state
 let currentCalendarMonth = new Date().getMonth();
@@ -240,7 +241,7 @@ function calculatePnL(entry, exit) {
         pnl = (entry.price - exit.price) * entry.quantity;
     }
     
-    // FIXED: MNQ multiplier is $2 per point (not $5)
+    // MNQ multiplier is $2 per point, MES is $5 per point
     if (entry.instrument.includes('MNQ')) {
         pnl = pnl * 2;
     } else if (entry.instrument.includes('MES')) {
@@ -283,7 +284,7 @@ function filterTrades() {
     loadTrades(currentAccountFilter, currentPlaybookFilter);
 }
 
-function loadTrades(filterAccount = 'all', filterPlaybook = 'all') {
+function loadTrades(filterAccount = 'all', filterPlaybook = 'all', filterDate = null) {
     const container = document.getElementById('tradesContainer');
     let filteredTrades = trades;
     
@@ -293,6 +294,17 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all') {
     
     if (filterPlaybook !== 'all') {
         filteredTrades = filteredTrades.filter(t => t.playbook === filterPlaybook);
+    }
+    
+    // ADDED: Filter by date if provided (from calendar click)
+    if (filterDate) {
+        filteredTrades = filteredTrades.filter(t => {
+            const date = new Date(t.entryDate);
+            const tradeKey = date.getFullYear() + '-' + 
+                            String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                            String(date.getDate()).padStart(2, '0');
+            return tradeKey === filterDate;
+        });
     }
     
     if (filteredTrades.length === 0) {
@@ -365,7 +377,7 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all') {
         
         // Screenshot
         if (trade.screenshot) {
-            html += '<div style="margin-bottom: 15px;"><img src="' + trade.screenshot + '" style="max-width: 100%; border-radius: 10px;" onerror="this.style.display=\'none\'"></div>';
+            html += '<div style="margin-bottom: 15px;"><img src="' + trade.screenshot + '" style="max-width: 100%; border-radius: 10px; cursor: pointer;" onclick="window.open(\'' + trade.screenshot + '\', \'_blank\')" onerror="this.style.display=\'none\'"></div>';
         }
         
         html += '<div class="button-group">';
@@ -523,13 +535,14 @@ function setupCalendar() {
 function renderCalendar() {
     const calendar = document.getElementById('calendar');
     const title = document.getElementById('calendarTitle');
+    const monthlyPnLElement = document.getElementById('monthlyPnL');
     
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December'];
     
     title.textContent = monthNames[currentCalendarMonth] + ' ' + currentCalendarYear;
     
-    // FIXED: Filter trades by current account filter
+    // Filter trades by current account filter
     let filteredTrades = trades;
     if (currentAccountFilter !== 'all') {
         filteredTrades = filteredTrades.filter(t => t.account === currentAccountFilter);
@@ -540,12 +553,18 @@ function renderCalendar() {
     
     const dailyPnL = {};
     const dailyTrades = {};
+    let monthlyTotal = 0;
     
     filteredTrades.forEach(trade => {
         const date = new Date(trade.entryDate);
         const dateKey = date.getFullYear() + '-' + 
                        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
                        String(date.getDate()).padStart(2, '0');
+        
+        // Calculate monthly total
+        if (date.getMonth() === currentCalendarMonth && date.getFullYear() === currentCalendarYear) {
+            monthlyTotal += trade.pnl;
+        }
         
         if (!dailyPnL[dateKey]) {
             dailyPnL[dateKey] = 0;
@@ -554,6 +573,10 @@ function renderCalendar() {
         dailyPnL[dateKey] += trade.pnl;
         dailyTrades[dateKey].push(trade);
     });
+    
+    // ADDED: Display monthly P&L
+    monthlyPnLElement.textContent = 'Monthly P&L: ' + (monthlyTotal >= 0 ? '+' : '') + '$' + monthlyTotal.toFixed(2);
+    monthlyPnLElement.className = monthlyTotal >= 0 ? 'profit' : 'loss';
     
     const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1);
     const lastDay = new Date(currentCalendarYear, currentCalendarMonth + 1, 0);
@@ -593,7 +616,8 @@ function renderCalendar() {
             classes += ' today';
         }
         
-        html += '<div class="' + classes + '" onclick="showDayTrades(\'' + dateKey + '\')">';
+        // CHANGED: Click calendar day to show trades below (not modal)
+        html += '<div class="' + classes + '" onclick="loadTradesByDate(\'' + dateKey + '\')">';
         html += '<div class="day-number">' + day + '</div>';
         if (pnl !== 0) {
             html += '<div class="day-pnl ' + (pnl >= 0 ? 'profit' : 'loss') + '">';
@@ -614,8 +638,27 @@ function renderCalendar() {
     calendar.innerHTML = html;
 }
 
+// ADDED: Load trades by date (show below when calendar day clicked)
+function loadTradesByDate(dateKey) {
+    const date = new Date(dateKey);
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Scroll to trades section
+    document.getElementById('tradesContainer').scrollIntoView({ behavior: 'smooth' });
+    
+    // Show notification
+    const notification = document.createElement('div');
+    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #667eea; color: white; padding: 15px 25px; border-radius: 10px; z-index: 10000; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3);';
+    notification.textContent = '📅 Showing trades for ' + dateStr;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+    
+    // Load trades for this date
+    loadTrades(currentAccountFilter, currentPlaybookFilter, dateKey);
+}
+
 function showDayTrades(dateKey) {
-    // FIXED: Apply current filters to day trades
+    // Filter trades for this day
     let dayTrades = trades.filter(trade => {
         const date = new Date(trade.entryDate);
         const tradeKey = date.getFullYear() + '-' + 
@@ -848,9 +891,48 @@ function closeModal() {
     document.getElementById('chartModal').style.display = 'none';
 }
 
+// ADDED: Screenshot capture function
+async function captureChartScreenshot() {
+    const chartDiv = document.getElementById('tradeChart');
+    const trade = trades.find(t => t.id === currentChartTradeId);
+    
+    if (!trade) {
+        alert('Trade not found');
+        return;
+    }
+    
+    try {
+        const canvas = await html2canvas(chartDiv, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            logging: false
+        });
+        
+        // Convert to blob
+        canvas.toBlob(function(blob) {
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = trade.symbol + '_' + new Date(trade.entryDate).toISOString().split('T')[0] + '_chart.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('📸 Screenshot saved! Upload it to Imgur and paste the URL in Edit Trade.');
+        });
+    } catch (error) {
+        console.error('Screenshot error:', error);
+        alert('❌ Error capturing screenshot. Please try again.');
+    }
+}
+
 async function viewChart(tradeId) {
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
+    
+    currentChartTradeId = tradeId;
     
     const modal = document.getElementById('chartModal');
     const chartTitle = document.getElementById('chartTitle');
@@ -859,6 +941,9 @@ async function viewChart(tradeId) {
     chartTitle.innerHTML = trade.symbol + ' - ' + trade.tradeType.toUpperCase() + ' Trade <span style="float: right; font-size: 16px; margin-top: 5px;"><select id="timeframeSelect"><option value="60">1 min</option><option value="300" selected>5 min</option><option value="900">15 min</option><option value="3600">1 hour</option></select></span>';
     
     chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">🔄 Loading real market data...</div>';
+    
+    // Setup capture button
+    document.getElementById('captureChartBtn').onclick = captureChartScreenshot;
     
     let chartInstance = null;
     
@@ -869,12 +954,15 @@ async function viewChart(tradeId) {
         
         chartDiv.innerHTML = '<div style="text-align:center;padding:40px;color:#667eea;">Loading...</div>';
         
-        const parseCSVDate = (dateStr) => {
-            return new Date(dateStr);
+        // FIXED: Parse date correctly (NinjaTrader uses local time)
+        const parseTradeDate = (dateStr) => {
+            // Format: "10/16/2025 9:42:14 AM"
+            const date = new Date(dateStr);
+            return date;
         };
         
-        const entryDate = parseCSVDate(trade.entryDate);
-        const exitDate = parseCSVDate(trade.exitDate);
+        const entryDate = parseTradeDate(trade.entryDate);
+        const exitDate = parseTradeDate(trade.exitDate);
         const tradeDuration = exitDate - entryDate;
         
         const startDate = new Date(entryDate.getTime() - tradeDuration * 1);
@@ -883,6 +971,8 @@ async function viewChart(tradeId) {
         console.log('=== TRADE TIMES ===');
         console.log('Entry:', entryDate.toLocaleString());
         console.log('Exit:', exitDate.toLocaleString());
+        console.log('Entry timestamp:', Math.floor(entryDate.getTime() / 1000));
+        console.log('Exit timestamp:', Math.floor(exitDate.getTime() / 1000));
         
         let candleData = await fetchRealMarketData(trade.symbol, startDate, endDate, timeframe);
         
@@ -959,21 +1049,25 @@ async function viewChart(tradeId) {
         });
         candleSeries.setData(candleData);
         
-        const ema9Series = chartInstance.addLineSeries({ color: '#8b5cf6', lineWidth: 2 });
+        const ema9Series = chartInstance.addLineSeries({ color: '#8b5cf6', lineWidth: 2, title: '9 EMA' });
         ema9Series.setData(ema9Data);
         
-        const ema21Series = chartInstance.addLineSeries({ color: '#f97316', lineWidth: 2 });
+        const ema21Series = chartInstance.addLineSeries({ color: '#f97316', lineWidth: 2, title: '21 EMA' });
         ema21Series.setData(ema21Data);
         
         if (sma200Data.length > 0) {
-            const sma200Series = chartInstance.addLineSeries({ color: '#3b82f6', lineWidth: 2 });
+            const sma200Series = chartInstance.addLineSeries({ color: '#3b82f6', lineWidth: 2, title: '200 SMA' });
             sma200Series.setData(sma200Data);
         }
         
-        // REMOVED VOLUME - No longer displayed
+        // REMOVED VOLUME
         
+        // FIXED: Use exact timestamps from parsed dates
         const entryTimestamp = Math.floor(entryDate.getTime() / 1000);
         const exitTimestamp = Math.floor(exitDate.getTime() / 1000);
+        
+        console.log('Looking for candles near entry:', entryTimestamp, '=', new Date(entryTimestamp * 1000).toLocaleString());
+        console.log('Looking for candles near exit:', exitTimestamp, '=', new Date(exitTimestamp * 1000).toLocaleString());
         
         const entryCandle = candleData.reduce((prev, curr) => 
             Math.abs(curr.time - entryTimestamp) < Math.abs(prev.time - entryTimestamp) ? curr : prev
@@ -982,6 +1076,9 @@ async function viewChart(tradeId) {
         const exitCandle = candleData.reduce((prev, curr) => 
             Math.abs(curr.time - exitTimestamp) < Math.abs(prev.time - exitTimestamp) ? curr : prev
         );
+        
+        console.log('Entry candle found at:', new Date(entryCandle.time * 1000).toLocaleString());
+        console.log('Exit candle found at:', new Date(exitCandle.time * 1000).toLocaleString());
         
         candleSeries.setMarkers([
             {
