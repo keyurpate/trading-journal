@@ -6,6 +6,7 @@ let polygonApiKey = localStorage.getItem('polygonApiKey') || 'e329C3pUBVi1hwvO3W
 // Current edit trade
 let currentEditTradeId = null;
 let currentScreenshotDataURL = null;
+let currentDayDateKey = null;
 
 // Calendar state
 let currentCalendarMonth = new Date().getMonth();
@@ -32,6 +33,28 @@ function setupEventListeners() {
     document.getElementById('accountFilter').addEventListener('change', filterTrades);
     document.getElementById('playbookFilter').addEventListener('change', filterTrades);
     document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
+    
+    // Export backup button
+    document.getElementById('exportCsvButton').addEventListener('click', function() {
+        const dataStr = JSON.stringify(trades, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'trading-journal-backup-' + new Date().toISOString().split('T')[0] + '.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        alert('✅ Backup saved! You can restore this file later.');
+    });
+    
+    // Clear all data button
+    document.getElementById('clearDataButton').addEventListener('click', function() {
+        if (confirm('⚠️ Are you sure you want to delete ALL trades and data? This cannot be undone!')) {
+            localStorage.clear();
+            alert('✅ All data cleared! Page will reload.');
+            location.reload();
+        }
+    });
     
     const modal = document.getElementById('chartModal');
     const closeBtn = document.querySelector('.close');
@@ -212,14 +235,42 @@ function importCsv() {
             });
         }
         
-        trades = [...trades, ...parsedTrades];
+        console.log('New trades to import:', parsedTrades);
+        
+        // SMART DUPLICATE DETECTION
+        let duplicates = 0;
+        let newTrades = 0;
+        
+        parsedTrades.forEach(newTrade => {
+            const isDuplicate = trades.some(existingTrade => 
+                existingTrade.symbol === newTrade.symbol &&
+                existingTrade.entryDate === newTrade.entryDate &&
+                existingTrade.account === newTrade.account &&
+                Math.abs(existingTrade.entryPrice - newTrade.entryPrice) < 0.01
+            );
+            
+            if (isDuplicate) {
+                duplicates++;
+            } else {
+                trades.push(newTrade);
+                newTrades++;
+            }
+        });
+        
         localStorage.setItem('trades', JSON.stringify(trades));
         
         updateFilters();
         renderCalendar();
         loadTrades();
         
-        alert('✅ Successfully imported ' + parsedTrades.length + ' trades!');
+        let message = '✅ Import Complete!\n\n';
+        message += '📊 New trades added: ' + newTrades + '\n';
+        if (duplicates > 0) {
+            message += '⚠️ Duplicates skipped: ' + duplicates + '\n';
+        }
+        message += '💼 Total accounts: ' + [...new Set(trades.map(t => t.account))].length;
+        
+        alert(message);
         fileInput.value = '';
     };
     
@@ -613,7 +664,7 @@ function renderCalendar() {
             classes += ' today';
         }
         
-        html += '<div class="' + classes + '" onclick="loadTradesByDate(\'' + dateKey + '\')">';
+        html += '<div class="' + classes + '" onclick="showDayTrades(\'' + dateKey + '\')">';
         html += '<div class="day-number">' + day + '</div>';
         if (pnl !== 0) {
             html += '<div class="day-pnl ' + (pnl >= 0 ? 'profit' : 'loss') + '">';
@@ -634,22 +685,9 @@ function renderCalendar() {
     calendar.innerHTML = html;
 }
 
-function loadTradesByDate(dateKey) {
-    const date = new Date(dateKey);
-    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    
-    document.getElementById('tradesContainer').scrollIntoView({ behavior: 'smooth' });
-    
-    const notification = document.createElement('div');
-    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #667eea; color: white; padding: 15px 25px; border-radius: 10px; z-index: 10000; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3);';
-    notification.textContent = '📅 Showing trades for ' + dateStr;
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
-    
-    loadTrades(currentAccountFilter, currentPlaybookFilter, dateKey);
-}
-
 function showDayTrades(dateKey) {
+    currentDayDateKey = dateKey;
+    
     let dayTrades = trades.filter(trade => {
         const date = new Date(trade.entryDate);
         const tradeKey = date.getFullYear() + '-' + 
@@ -708,11 +746,31 @@ function showDayTrades(dateKey) {
     
     content.innerHTML = html;
     
+    document.getElementById('viewDayTradesBtn').onclick = function() {
+        modal.style.display = 'none';
+        loadTradesByDate(dateKey);
+    };
+    
     document.getElementById('deleteDayTradesBtn').onclick = function() {
         deleteDayTrades(dateKey);
     };
     
     modal.style.display = 'block';
+}
+
+function loadTradesByDate(dateKey) {
+    const date = new Date(dateKey);
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    document.getElementById('tradesContainer').scrollIntoView({ behavior: 'smooth' });
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #667eea; color: white; padding: 15px 25px; border-radius: 10px; z-index: 10000; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3);';
+    notification.textContent = '📅 Showing trades for ' + dateStr;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+    
+    loadTrades(currentAccountFilter, currentPlaybookFilter, dateKey);
 }
 
 function deleteDayTrades(dateKey) {
