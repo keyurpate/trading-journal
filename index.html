@@ -14,6 +14,9 @@
             <h2>Import Trades</h2>
             <input type="file" id="csvFileInput" accept=".csv">
             <button id="importCsvButton">Import CSV</button>
+            <button id="exportCsvButton" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-left: 10px;">💾 Export Backup</button>
+            <button id="clearDataButton" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); margin-left: 10px;">🗑️ Clear All Data</button>
+            <br><br>
             <label for="accountFilter">Filter by Account:</label>
             <select id="accountFilter">
                 <option value="all">All Accounts</option>
@@ -62,11 +65,12 @@
 
     <!-- Day Trades Modal -->
     <div id="dayTradesModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 900px;">
             <span class="close-day">&times;</span>
             <h2 id="dayTradesTitle">Trades for Selected Day</h2>
             <div id="dayTradesContent"></div>
-            <div style="margin-top: 20px; text-align: center;">
+            <div style="margin-top: 20px; text-align: center; display: flex; gap: 15px; justify-content: center;">
+                <button id="viewDayTradesBtn" class="view-day-btn">📋 View Trades Below</button>
                 <button id="deleteDayTradesBtn" class="delete-day-btn">🗑️ Delete All Trades This Day</button>
             </div>
         </div>
