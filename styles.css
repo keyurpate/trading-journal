@@ -50,7 +50,7 @@ input[type="file"], input[type="text"] {
     margin-right: 15px;
 }
 
-#importCsvButton, #saveApiKeyButton, #exportCsvButton, #clearDataButton, #importBackupButton {
+#importCsvButton, #saveApiKeyButton, #exportCsvButton, #clearDataButton, #importBackupButton, #addPlaybookButton {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
@@ -62,7 +62,7 @@ input[type="file"], input[type="text"] {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-#importCsvButton:hover, #saveApiKeyButton:hover, #exportCsvButton:hover, #clearDataButton:hover, #importBackupButton:hover {
+#importCsvButton:hover, #saveApiKeyButton:hover, #exportCsvButton:hover, #clearDataButton:hover, #importBackupButton:hover, #addPlaybookButton:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
 }
@@ -75,6 +75,110 @@ select {
     font-size: 14px;
     margin-left: 10px;
     cursor: pointer;
+}
+
+/* Playbook Manager */
+.playbook-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.playbook-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+}
+
+.playbook-tag .delete-playbook-btn {
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.playbook-tag .delete-playbook-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+/* Playbook Stats */
+.playbook-stats-section {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border: 2px solid #e2e8f0;
+}
+
+.playbook-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.playbook-stat-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.playbook-stat-card:hover {
+    transform: translateY(-5px);
+    border-color: #8b5cf6;
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+}
+
+.playbook-stat-card h3 {
+    color: #8b5cf6;
+    font-size: 16px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.playbook-stat-card .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.playbook-stat-card .stat-label {
+    color: #64748b;
+}
+
+.playbook-stat-card .stat-value {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.playbook-stat-card .stat-value.profit {
+    color: #10b981;
+}
+
+.playbook-stat-card .stat-value.loss {
+    color: #ef4444;
 }
 
 /* Calendar Styles */
@@ -746,5 +850,9 @@ select {
     
     .day-pnl {
         font-size: 10px;
+    }
+    
+    .playbook-stats-grid {
+        grid-template-columns: 1fr;
     }
 }
