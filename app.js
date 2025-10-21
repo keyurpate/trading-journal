@@ -1285,7 +1285,3 @@ async function viewChart(tradeId) {
                 color: '#10b981',
                 shape: 'arrowUp',
                 text: 'Entry: $' + trade.entryPrice.toFixed(2)
-            },
-            {
-                time: exitCandle.time,
-                position: trade.tradeType
