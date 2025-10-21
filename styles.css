@@ -50,7 +50,7 @@ input[type="file"], input[type="text"] {
     margin-right: 15px;
 }
 
-#importCsvButton, #saveApiKeyButton, #exportCsvButton, #clearDataButton {
+#importCsvButton, #saveApiKeyButton, #exportCsvButton, #clearDataButton, #importBackupButton {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
@@ -62,7 +62,7 @@ input[type="file"], input[type="text"] {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-#importCsvButton:hover, #saveApiKeyButton:hover, #exportCsvButton:hover, #clearDataButton:hover {
+#importCsvButton:hover, #saveApiKeyButton:hover, #exportCsvButton:hover, #clearDataButton:hover, #importBackupButton:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
 }
@@ -506,7 +506,6 @@ select {
     position: relative;
 }
 
-/* Day Trades Modal */
 .delete-day-btn {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
@@ -546,24 +545,6 @@ select {
     overflow-y: auto;
     margin-top: 20px;
     padding-right: 10px;
-}
-
-#dayTradesContent::-webkit-scrollbar {
-    width: 8px;
-}
-
-#dayTradesContent::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 10px;
-}
-
-#dayTradesContent::-webkit-scrollbar-thumb {
-    background: #667eea;
-    border-radius: 10px;
-}
-
-#dayTradesContent::-webkit-scrollbar-thumb:hover {
-    background: #5568d3;
 }
 
 .day-trade-item {
@@ -646,7 +627,6 @@ select {
     font-weight: 700;
 }
 
-/* Edit Trade Form */
 .form-group {
     margin-bottom: 25px;
 }
@@ -743,16 +723,6 @@ select {
     margin-top: 10px;
 }
 
-input[type="file"] {
-    padding: 10px;
-    border: 2px solid #cbd5e1;
-    border-radius: 8px;
-    background: white;
-    width: 100%;
-    cursor: pointer;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
     .container {
         padding: 20px;
@@ -760,14 +730,6 @@ input[type="file"] {
     
     h1 {
         font-size: 32px;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .trade-details {
-        grid-template-columns: 1fr;
     }
     
     #calendar {
@@ -784,27 +746,5 @@ input[type="file"] {
     
     .day-pnl {
         font-size: 10px;
-    }
-    
-    .modal-content {
-        width: 95%;
-        padding: 20px;
-    }
-    
-    #tradeChart {
-        height: 400px;
-    }
-    
-    .rating-buttons {
-        flex-wrap: wrap;
-    }
-    
-    .checkbox-group {
-        grid-template-columns: 1fr;
-    }
-    
-    .day-summary {
-        flex-direction: column;
-        gap: 15px;
     }
 }
