@@ -40,6 +40,18 @@
             </p>
         </div>
 
+        <!-- Playbook Manager Section -->
+        <div class="import-section" style="margin-top: 20px;">
+            <h2>📚 Playbook Manager</h2>
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
+                <input type="text" id="newPlaybookInput" placeholder="Enter new playbook name (e.g. VWAP Bounce)" style="flex: 1; width: auto;">
+                <button id="addPlaybookButton" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">➕ Add Playbook</button>
+            </div>
+            <div id="playbooksList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
+                <!-- Playbooks will appear here -->
+            </div>
+        </div>
+
         <!-- Calendar Section -->
         <div class="calendar-section">
             <div class="calendar-header">
@@ -88,14 +100,7 @@
                     <label>Playbook/Setup:</label>
                     <select id="editPlaybook">
                         <option value="">Select Playbook</option>
-                        <option value="9 EMA Trend">9 EMA Trend</option>
-                        <option value="Breakout">Breakout</option>
-                        <option value="Support/Resistance">Support/Resistance</option>
-                        <option value="VWAP Bounce">VWAP Bounce</option>
-                        <option value="Opening Range">Opening Range</option>
-                        <option value="Reversal">Reversal</option>
-                        <option value="Scalp">Scalp</option>
-                        <option value="Other">Other</option>
+                        <!-- Will be populated dynamically -->
                     </select>
                 </div>
 
