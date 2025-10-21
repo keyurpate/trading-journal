@@ -45,6 +45,168 @@ const INSTRUMENT_MULTIPLIERS = [
     { pattern: 'ZB', multiplier: 31.25, name: '30-Year T-Bond' },
 ];
 
+// PLAYBOOK MANAGEMENT
+let customPlaybooks = JSON.parse(localStorage.getItem('customPlaybooks')) || [
+    '9 EMA Trend',
+    'Breakout',
+    'Support/Resistance',
+    'VWAP Bounce',
+    'Opening Range',
+    'Reversal',
+    'Scalp',
+    'Other'
+];
+
+function savePlaybooks() {
+    localStorage.setItem('customPlaybooks', JSON.stringify(customPlaybooks));
+    updatePlaybookUI();
+    updatePlaybookDropdowns();
+}
+
+function addPlaybook(name) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        alert('❌ Please enter a playbook name');
+        return;
+    }
+    
+    if (customPlaybooks.includes(trimmedName)) {
+        alert('⚠️ This playbook already exists!');
+        return;
+    }
+    
+    customPlaybooks.push(trimmedName);
+    savePlaybooks();
+    document.getElementById('newPlaybookInput').value = '';
+    alert('✅ Playbook "' + trimmedName + '" added!');
+}
+
+function deletePlaybook(name) {
+    if (confirm('⚠️ Delete playbook "' + name + '"?\n\nTrades with this playbook will keep the name but it won\'t appear in the list.')) {
+        customPlaybooks = customPlaybooks.filter(p => p !== name);
+        savePlaybooks();
+        alert('✅ Playbook deleted!');
+    }
+}
+
+function updatePlaybookUI() {
+    const container = document.getElementById('playbooksList');
+    if (!container) return;
+    
+    let html = '';
+    customPlaybooks.forEach(playbook => {
+        html += '<div class="playbook-tag">';
+        html += '<span>📌 ' + playbook + '</span>';
+        html += '<button class="delete-playbook-btn" onclick="deletePlaybook(\'' + playbook.replace(/'/g, "\\'") + '\')">×</button>';
+        html += '</div>';
+    });
+    
+    container.innerHTML = html || '<p style="color: #94a3b8; font-size: 14px;">No custom playbooks yet. Add one above!</p>';
+}
+
+function updatePlaybookDropdowns() {
+    // Update filter dropdown
+    const playbookFilter = document.getElementById('playbookFilter');
+    if (playbookFilter) {
+        const currentValue = playbookFilter.value;
+        playbookFilter.innerHTML = '<option value="all">All Playbooks</option>';
+        
+        const usedPlaybooks = [...new Set(trades.map(t => t.playbook).filter(p => p))];
+        usedPlaybooks.forEach(playbook => {
+            const option = document.createElement('option');
+            option.value = playbook;
+            option.textContent = playbook;
+            playbookFilter.appendChild(option);
+        });
+        
+        playbookFilter.value = currentValue;
+    }
+    
+    // Update edit dropdown
+    const editPlaybook = document.getElementById('editPlaybook');
+    if (editPlaybook) {
+        const currentValue = editPlaybook.value;
+        editPlaybook.innerHTML = '<option value="">Select Playbook</option>';
+        
+        customPlaybooks.forEach(playbook => {
+            const option = document.createElement('option');
+            option.value = playbook;
+            option.textContent = playbook;
+            editPlaybook.appendChild(option);
+        });
+        
+        editPlaybook.value = currentValue;
+    }
+}
+
+function calculatePlaybookStats() {
+    const stats = {};
+    
+    customPlaybooks.forEach(playbook => {
+        const playbookTrades = trades.filter(t => t.playbook === playbook);
+        
+        if (playbookTrades.length === 0) return;
+        
+        const totalTrades = playbookTrades.length;
+        const wins = playbookTrades.filter(t => t.pnl > 0).length;
+        const losses = playbookTrades.filter(t => t.pnl < 0).length;
+        const totalPnL = playbookTrades.reduce((sum, t) => sum + t.pnl, 0);
+        const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : 0;
+        const avgPnL = totalTrades > 0 ? totalPnL / totalTrades : 0;
+        
+        stats[playbook] = {
+            totalTrades,
+            wins,
+            losses,
+            totalPnL,
+            winRate,
+            avgPnL
+        };
+    });
+    
+    return stats;
+}
+
+function renderPlaybookStats() {
+    const stats = calculatePlaybookStats();
+    
+    if (Object.keys(stats).length === 0) return '';
+    
+    let html = '<div class="playbook-stats-section">';
+    html += '<h2>📚 Playbook Performance</h2>';
+    html += '<div class="playbook-stats-grid">';
+    
+    Object.entries(stats).forEach(([playbook, data]) => {
+        html += '<div class="playbook-stat-card" onclick="filterByPlaybook(\'' + playbook.replace(/'/g, "\\'") + '\')">';
+        html += '<h3>📌 ' + playbook + '</h3>';
+        html += '<div class="stat-row"><span class="stat-label">Total Trades:</span><span class="stat-value">' + data.totalTrades + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Wins / Losses:</span><span class="stat-value">' + data.wins + ' / ' + data.losses + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Win Rate:</span><span class="stat-value">' + data.winRate + '%</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Total P&L:</span><span class="stat-value ' + (data.totalPnL >= 0 ? 'profit' : 'loss') + '">' + (data.totalPnL >= 0 ? '+' : '') + '$' + data.totalPnL.toFixed(2) + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Avg P&L:</span><span class="stat-value ' + (data.avgPnL >= 0 ? 'profit' : 'loss') + '">' + (data.avgPnL >= 0 ? '+' : '') + '$' + data.avgPnL.toFixed(2) + '</span></div>';
+        html += '</div>';
+    });
+    
+    html += '</div></div>';
+    
+    return html;
+}
+
+function filterByPlaybook(playbookName) {
+    document.getElementById('playbookFilter').value = playbookName;
+    currentPlaybookFilter = playbookName;
+    renderCalendar();
+    loadTrades(currentAccountFilter, currentPlaybookFilter);
+    
+    document.getElementById('tradesContainer').scrollIntoView({ behavior: 'smooth' });
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #8b5cf6; color: white; padding: 15px 25px; border-radius: 10px; z-index: 10000; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3);';
+    notification.textContent = '📌 Filtered by: ' + playbookName;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
 function getMultiplierForSymbol(symbol) {
     if (!symbol) return 1;
     const s = symbol.toUpperCase();
@@ -90,15 +252,26 @@ function recalcAllPnL() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 App starting...');
+    console.log('📅 Today:', new Date().toLocaleDateString());
+    
+    const now = new Date();
+    currentCalendarMonth = now.getMonth();
+    currentCalendarYear = now.getFullYear();
+    
     recalcAllPnL();
     loadTrades();
     setupEventListeners();
     loadApiKey();
     setupCalendar();
+    updatePlaybookUI();
+    updatePlaybookDropdowns();
     
     if (!localStorage.getItem('polygonApiKey')) {
         localStorage.setItem('polygonApiKey', polygonApiKey);
     }
+    
+    console.log('✅ App loaded!');
 });
 
 function setupEventListeners() {
@@ -106,6 +279,24 @@ function setupEventListeners() {
     document.getElementById('accountFilter').addEventListener('change', filterTrades);
     document.getElementById('playbookFilter').addEventListener('change', filterTrades);
     document.getElementById('saveApiKeyButton').addEventListener('click', saveApiKey);
+    
+    // Playbook management
+    const addPlaybookBtn = document.getElementById('addPlaybookButton');
+    if (addPlaybookBtn) {
+        addPlaybookBtn.addEventListener('click', function() {
+            const input = document.getElementById('newPlaybookInput');
+            addPlaybook(input.value);
+        });
+    }
+
+    const newPlaybookInput = document.getElementById('newPlaybookInput');
+    if (newPlaybookInput) {
+        newPlaybookInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addPlaybook(this.value);
+            }
+        });
+    }
     
     // Export backup
     const exportBtn = document.getElementById('exportCsvButton');
@@ -419,15 +610,7 @@ function updateFilters() {
         accountFilter.appendChild(option);
     });
     
-    const playbookFilter = document.getElementById('playbookFilter');
-    const uniquePlaybooks = [...new Set(trades.map(t => t.playbook).filter(p => p))];
-    playbookFilter.innerHTML = '<option value="all">All Playbooks</option>';
-    uniquePlaybooks.forEach(playbook => {
-        const option = document.createElement('option');
-        option.value = playbook;
-        option.textContent = playbook;
-        playbookFilter.appendChild(option);
-    });
+    updatePlaybookDropdowns();
 }
 
 function filterTrades() {
@@ -467,7 +650,8 @@ function loadTrades(filterAccount = 'all', filterPlaybook = 'all', filterDate = 
     
     const stats = calculateStats(filteredTrades);
     
-    let html = '<div class="stats-section"><h2>📈 Performance Statistics</h2><div class="stats-grid">';
+    let html = renderPlaybookStats();
+    html += '<div class="stats-section"><h2>📈 Performance Statistics</h2><div class="stats-grid">';
     html += '<div class="stat-card"><h3>Total Trades</h3><p>' + stats.totalTrades + '</p></div>';
     html += '<div class="stat-card"><h3>Win Rate</h3><p>' + stats.winRate + '%</p></div>';
     html += '<div class="stat-card"><h3>Total P&L</h3><p>$' + stats.totalPnL.toFixed(2) + '</p></div>';
@@ -568,6 +752,8 @@ function editTrade(tradeId) {
     if (!trade) return;
     
     const modal = document.getElementById('editTradeModal');
+    
+    updatePlaybookDropdowns();
     
     document.getElementById('editPlaybook').value = trade.playbook || '';
     document.getElementById('editTags').value = trade.tags ? trade.tags.join(', ') : '';
@@ -1102,24 +1288,4 @@ async function viewChart(tradeId) {
             },
             {
                 time: exitCandle.time,
-                position: trade.tradeType === 'long' ? 'aboveBar' : 'belowBar',
-                color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
-                shape: 'arrowDown',
-                text: 'Exit: $' + trade.exitPrice.toFixed(2) + ' ($' + trade.pnl.toFixed(2) + ')'
-            }
-        ]);
-        
-        chartInstance.timeScale().fitContent();
-    }
-    
-    await renderChart(300);
-    
-    setTimeout(() => {
-        const selector = document.getElementById('timeframeSelect');
-        if (selector) selector.addEventListener('change', (e) => renderChart(parseInt(e.target.value)));
-        const closeBtn = document.querySelector('.close');
-        if (closeBtn) closeBtn.onclick = closeModal;
-    }, 100);
-    
-    modal.style.display = 'block';
-}
+                position: trade.tradeType
