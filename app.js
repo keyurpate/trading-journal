@@ -1285,3 +1285,27 @@ async function viewChart(tradeId) {
                 color: '#10b981',
                 shape: 'arrowUp',
                 text: 'Entry: $' + trade.entryPrice.toFixed(2)
+                                },
+            {
+                time: exitCandle.time,
+                position: trade.tradeType === 'long' ? 'aboveBar' : 'belowBar',
+                color: trade.pnl >= 0 ? '#10b981' : '#ef4444',
+                shape: 'arrowDown',
+                text: 'Exit: $' + trade.exitPrice.toFixed(2) + ' ($' + trade.pnl.toFixed(2) + ')'
+            }
+        ]);
+        
+        chartInstance.timeScale().fitContent();
+    }
+    
+    await renderChart(300);
+    
+    setTimeout(() => {
+        const selector = document.getElementById('timeframeSelect');
+        if (selector) selector.addEventListener('change', (e) => renderChart(parseInt(e.target.value)));
+        const closeBtn = document.querySelector('.close');
+        if (closeBtn) closeBtn.onclick = closeModal;
+    }, 100);
+    
+    modal.style.display = 'block';
+}
