@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
     <title>Trading Journal - Advanced</title>
 </head>
 <body>
@@ -35,21 +35,16 @@
             <label for="apiKeyInput">Polygon.io API Key:</label>
             <input type="text" id="apiKeyInput" placeholder="Enter your API key here" style="width: 400px; margin-right: 10px;">
             <button id="saveApiKeyButton" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Save API Key</button>
-            <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                Don't have an API key? <a href="https://polygon.io/" target="_blank" style="color: #667eea;">Get one free at Polygon.io</a>
-            </p>
         </div>
 
         <!-- Playbook Manager Section -->
         <div class="import-section" style="margin-top: 20px;">
             <h2>📚 Playbook Manager</h2>
             <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
-                <input type="text" id="newPlaybookInput" placeholder="Enter new playbook name (e.g. VWAP Bounce)" style="flex: 1; width: auto;">
-                <button id="addPlaybookButton" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">➕ Add Playbook</button>
+                <input type="text" id="newPlaybookInput" placeholder="Enter new playbook name" style="flex: 1; width: auto;">
+                <button id="addPlaybookButton">➕ Add Playbook</button>
             </div>
-            <div id="playbooksList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
-                <!-- Playbooks will appear here -->
-            </div>
+            <div id="playbooksList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;"></div>
         </div>
 
         <!-- Calendar Section -->
@@ -57,124 +52,30 @@
             <div class="calendar-header">
                 <button id="prevMonth" class="calendar-nav">←</button>
                 <div style="text-align: center;">
-                    <h2 id="calendarTitle">October 2025</h2>
-                    <p id="monthlyPnL" style="font-size: 14px; color: #64748b; margin-top: 5px; font-weight: 600;">Monthly P&L: $0.00</p>
+                    <h2 id="calendarTitle">Month Year</h2>
+                    <p id="monthlyPnL" style="font-size: 14px; font-weight: 600;">Monthly P&L: $0.00</p>
                 </div>
                 <button id="nextMonth" class="calendar-nav">→</button>
             </div>
             <div id="calendar"></div>
         </div>
         
+        <!-- Stats and Trades will be rendered here -->
         <div id="tradesContainer"></div>
     </div>
 
-    <!-- Chart Modal -->
-    <div id="chartModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 id="chartTitle">Trade Chart</h2>
-            <div id="tradeChart"></div>
-        </div>
-    </div>
+    <!-- Modals -->
+    <div id="chartModal" class="modal"><div class="modal-content"><span class="close">&times;</span><h2 id="chartTitle">Trade Chart</h2><div id="tradeChart"></div></div></div>
+    <div id="dayTradesModal" class="modal"><div class="modal-content" style="max-width: 900px;"><span class="close-day">&times;</span><h2 id="dayTradesTitle">Trades</h2><div id="dayTradesContent"></div><div style="margin-top: 20px; text-align: center; display: flex; gap: 15px; justify-content: center;"><button id="viewDayTradesBtn" class="view-day-btn">📋 View Trades Below</button><button id="deleteDayTradesBtn" class="delete-day-btn">🗑️ Delete All Trades This Day</button></div></div></div>
+    <div id="editTradeModal" class="modal"><div class="modal-content"><span class="close-edit">&times;</span><h2>✏️ Edit Trade Details</h2><div id="editTradeForm">
+        <div class="form-group"><label>Playbook:</label><select id="editPlaybook"><option value="">Select Playbook</option></select></div>
+        <div class="form-group"><label>Entry Quality:</label><div class="rating-buttons"><button class="rating-btn" data-rating="1" data-type="entry">1⭐</button><button class="rating-btn" data-rating="5" data-type="entry">5⭐</button></div></div>
+        <div class="form-group"><label>Tags (comma separated):</label><input type="text" id="editTags" placeholder="FOMO, Perfect Setup"></div>
+        <div class="form-group"><label>Mistakes:</label><div class="checkbox-group"><label><input type="checkbox" class="mistake-check" value="Overleveraged"> Overleveraged</label><label><input type="checkbox" class="mistake-check" value="FOMO"> FOMO</label></div></div>
+        <div class="form-group"><label>Notes:</label><textarea id="editNotes" rows="4"></textarea></div>
+        <button id="saveTradeBtn" class="save-trade-btn">💾 Save Trade</button>
+    </div></div></div>
 
-    <!-- Day Trades Modal -->
-    <div id="dayTradesModal" class="modal">
-        <div class="modal-content" style="max-width: 900px;">
-            <span class="close-day">&times;</span>
-            <h2 id="dayTradesTitle">Trades for Selected Day</h2>
-            <div id="dayTradesContent"></div>
-            <div style="margin-top: 20px; text-align: center; display: flex; gap: 15px; justify-content: center;">
-                <button id="viewDayTradesBtn" class="view-day-btn">📋 View Trades Below</button>
-                <button id="deleteDayTradesBtn" class="delete-day-btn">🗑️ Delete All Trades This Day</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Trade Modal -->
-    <div id="editTradeModal" class="modal">
-        <div class="modal-content">
-            <span class="close-edit">&times;</span>
-            <h2>✏️ Edit Trade Details</h2>
-            <div id="editTradeForm">
-                <div class="form-group">
-                    <label>Playbook/Setup:</label>
-                    <select id="editPlaybook">
-                        <option value="">Select Playbook</option>
-                        <!-- Will be populated dynamically -->
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Entry Quality:</label>
-                    <div class="rating-buttons">
-                        <button class="rating-btn" data-rating="1" data-type="entry">1 ⭐</button>
-                        <button class="rating-btn" data-rating="2" data-type="entry">2 ⭐</button>
-                        <button class="rating-btn" data-rating="3" data-type="entry">3 ⭐</button>
-                        <button class="rating-btn" data-rating="4" data-type="entry">4 ⭐</button>
-                        <button class="rating-btn" data-rating="5" data-type="entry">5 ⭐</button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Exit Quality:</label>
-                    <div class="rating-buttons">
-                        <button class="rating-btn" data-rating="1" data-type="exit">1 ⭐</button>
-                        <button class="rating-btn" data-rating="2" data-type="exit">2 ⭐</button>
-                        <button class="rating-btn" data-rating="3" data-type="exit">3 ⭐</button>
-                        <button class="rating-btn" data-rating="4" data-type="exit">4 ⭐</button>
-                        <button class="rating-btn" data-rating="5" data-type="exit">5 ⭐</button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Discipline Rating:</label>
-                    <div class="rating-buttons">
-                        <button class="rating-btn" data-rating="1" data-type="discipline">1 ⭐</button>
-                        <button class="rating-btn" data-rating="2" data-type="discipline">2 ⭐</button>
-                        <button class="rating-btn" data-rating="3" data-type="discipline">3 ⭐</button>
-                        <button class="rating-btn" data-rating="4" data-type="discipline">4 ⭐</button>
-                        <button class="rating-btn" data-rating="5" data-type="discipline">5 ⭐</button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Tags (comma separated):</label>
-                    <input type="text" id="editTags" placeholder="e.g. FOMO, Revenge Trade, Perfect Setup">
-                </div>
-
-                <div class="form-group">
-                    <label>Mistakes Made:</label>
-                    <div class="checkbox-group">
-                        <label><input type="checkbox" class="mistake-check" value="Overleveraged"> Overleveraged</label>
-                        <label><input type="checkbox" class="mistake-check" value="Moved Stop"> Moved Stop Loss</label>
-                        <label><input type="checkbox" class="mistake-check" value="FOMO"> FOMO Trade</label>
-                        <label><input type="checkbox" class="mistake-check" value="Revenge"> Revenge Trading</label>
-                        <label><input type="checkbox" class="mistake-check" value="No Plan"> No Trade Plan</label>
-                        <label><input type="checkbox" class="mistake-check" value="Ignored Rules"> Ignored Rules</label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Trade Notes/Journal:</label>
-                    <textarea id="editNotes" rows="4" placeholder="What happened during this trade? What did you learn?"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>📸 Upload TradingView Screenshot:</label>
-                    <input type="file" id="editScreenshotFile" accept="image/*" style="margin-bottom: 10px;">
-                    <input type="text" id="editScreenshot" placeholder="Or paste image URL (e.g. https://i.imgur.com/example.png)">
-                    <p style="font-size: 12px; color: #64748b; margin-top: 5px;">
-                        💡 Upload your TradingView screenshot or paste Imgur URL
-                    </p>
-                    <div id="screenshotPreview" style="margin-top: 10px;"></div>
-                </div>
-
-                <button id="saveTradeBtn" class="save-trade-btn">💾 Save Trade</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Lightweight Charts Library -->
     <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <script src="app.js"></script>
 </body>
