@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Link to your CSS file -->
     <link rel="stylesheet" href="style.css">
-    <title>Trading Journal - Advanced</title>
+    <title>Trading Journal - Professional</title>
 </head>
 <body>
     <div class="container">
@@ -12,70 +13,71 @@
         
         <div class="import-section">
             <h2>Import Trades</h2>
-            <input type="file" id="csvFileInput" accept=".csv">
-            <button id="importCsvButton">Import CSV</button>
-            <button id="exportCsvButton" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-left: 10px;">💾 Export Backup</button>
-            <button id="importBackupButton" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); margin-left: 10px;">📂 Import Backup</button>
-            <input type="file" id="backupFileInput" accept=".json" style="display: none;">
-            <button id="clearDataButton" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); margin-left: 10px;">🗑️ Clear All Data</button>
-            <br><br>
-            <label for="accountFilter">Filter by Account:</label>
-            <select id="accountFilter">
-                <option value="all">All Accounts</option>
-            </select>
-            <label for="playbookFilter" style="margin-left: 20px;">Filter by Playbook:</label>
-            <select id="playbookFilter">
-                <option value="all">All Playbooks</option>
-            </select>
-        </div>
-
-        <!-- API Key Section -->
-        <div class="import-section" style="margin-top: 20px;">
-            <h2>🔑 Market Data API Settings</h2>
-            <label for="apiKeyInput">Polygon.io API Key:</label>
-            <input type="text" id="apiKeyInput" placeholder="Enter your API key here" style="width: 400px; margin-right: 10px;">
-            <button id="saveApiKeyButton" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Save API Key</button>
-        </div>
-
-        <!-- Playbook Manager Section -->
-        <div class="import-section" style="margin-top: 20px;">
-            <h2>📚 Playbook Manager</h2>
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
-                <input type="text" id="newPlaybookInput" placeholder="Enter new playbook name" style="flex: 1; width: auto;">
-                <button id="addPlaybookButton">➕ Add Playbook</button>
+            <div class="import-controls">
+                <input type="file" id="csvFileInput" accept=".csv">
+                <button id="importCsvButton">Import CSV</button>
+                <button id="exportCsvButton" class="btn-green">💾 Export Backup</button>
+                <button id="importBackupButton" class="btn-orange">📂 Import Backup</button>
+                <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+                <button id="clearDataButton" class="btn-red">🗑️ Clear All Data</button>
             </div>
-            <div id="playbooksList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;"></div>
+            <div class="filter-controls">
+                <label>Account: <select id="accountFilter"><option value="all">All Accounts</option></select></label>
+                <label>Playbook: <select id="playbookFilter"><option value="all">All Playbooks</option></select></label>
+            </div>
         </div>
 
-        <!-- Calendar Section -->
+        <div class="import-section">
+            <h2>🔑 API & Playbooks</h2>
+            <div class="api-controls">
+                <input type="text" id="apiKeyInput" placeholder="Polygon.io API Key">
+                <button id="saveApiKeyButton">Save Key</button>
+            </div>
+            <div class="playbook-manager">
+                <input type="text" id="newPlaybookInput" placeholder="Add new playbook...">
+                <button id="addPlaybookButton">Add</button>
+            </div>
+            <div id="playbooksList" class="tag-container"></div>
+        </div>
+
         <div class="calendar-section">
             <div class="calendar-header">
                 <button id="prevMonth" class="calendar-nav">←</button>
-                <div style="text-align: center;">
+                <div class="calendar-title-group">
                     <h2 id="calendarTitle">Month Year</h2>
-                    <p id="monthlyPnL" style="font-size: 14px; font-weight: 600;">Monthly P&L: $0.00</p>
+                    <p id="monthlyPnL">Monthly P&L: $0.00</p>
                 </div>
                 <button id="nextMonth" class="calendar-nav">→</button>
             </div>
             <div id="calendar"></div>
         </div>
         
-        <!-- Stats and Trades will be rendered here -->
+        <div id="statsContainer"></div>
         <div id="tradesContainer"></div>
     </div>
 
     <!-- Modals -->
-    <div id="chartModal" class="modal"><div class="modal-content"><span class="close">&times;</span><h2 id="chartTitle">Trade Chart</h2><div id="tradeChart"></div></div></div>
-    <div id="dayTradesModal" class="modal"><div class="modal-content" style="max-width: 900px;"><span class="close-day">&times;</span><h2 id="dayTradesTitle">Trades</h2><div id="dayTradesContent"></div><div style="margin-top: 20px; text-align: center; display: flex; gap: 15px; justify-content: center;"><button id="viewDayTradesBtn" class="view-day-btn">📋 View Trades Below</button><button id="deleteDayTradesBtn" class="delete-day-btn">🗑️ Delete All Trades This Day</button></div></div></div>
-    <div id="editTradeModal" class="modal"><div class="modal-content"><span class="close-edit">&times;</span><h2>✏️ Edit Trade Details</h2><div id="editTradeForm">
-        <div class="form-group"><label>Playbook:</label><select id="editPlaybook"><option value="">Select Playbook</option></select></div>
-        <div class="form-group"><label>Entry Quality:</label><div class="rating-buttons"><button class="rating-btn" data-rating="1" data-type="entry">1⭐</button><button class="rating-btn" data-rating="5" data-type="entry">5⭐</button></div></div>
-        <div class="form-group"><label>Tags (comma separated):</label><input type="text" id="editTags" placeholder="FOMO, Perfect Setup"></div>
-        <div class="form-group"><label>Mistakes:</label><div class="checkbox-group"><label><input type="checkbox" class="mistake-check" value="Overleveraged"> Overleveraged</label><label><input type="checkbox" class="mistake-check" value="FOMO"> FOMO</label></div></div>
-        <div class="form-group"><label>Notes:</label><textarea id="editNotes" rows="4"></textarea></div>
-        <button id="saveTradeBtn" class="save-trade-btn">💾 Save Trade</button>
-    </div></div></div>
+    <div id="editTradeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-edit">&times;</span>
+            <h2>✏️ Edit Trade</h2>
+            <div class="form-group">
+                <label>Playbook:</label>
+                <select id="editPlaybook"></select>
+            </div>
+            <div class="form-group">
+                <label>Tags (e.g. FOMO, Trend):</label>
+                <input type="text" id="editTags">
+            </div>
+            <div class="form-group">
+                <label>Notes:</label>
+                <textarea id="editNotes" rows="4"></textarea>
+            </div>
+            <button id="saveTradeBtn" class="save-trade-btn">💾 Save Changes</button>
+        </div>
+    </div>
 
+    <!-- Scripts -->
     <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <script src="app.js"></script>
 </body>
