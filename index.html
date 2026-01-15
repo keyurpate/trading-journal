@@ -8,16 +8,13 @@
 </head>
 
 <body>
-  <!-- Header -->
   <header class="header">
     <h1>Trading Journal</h1>
     <p class="subtitle">Track trades, analyze performance, and improve results</p>
   </header>
 
-  <!-- Main Layout -->
   <main class="container">
 
-    <!-- Upload + Controls -->
     <section class="panel">
       <div class="panel-title">Import Trades</div>
 
@@ -25,7 +22,7 @@
         <div class="field">
           <label for="csvInput">Upload CSV</label>
           <input type="file" id="csvInput" accept=".csv" />
-          <small class="hint">Upload your trade CSV export (supports scale-in / partial exits)</small>
+          <small class="hint">Upload your trade CSV export</small>
         </div>
 
         <div class="field">
@@ -48,49 +45,23 @@
       </div>
     </section>
 
-    <!-- Tag Performance -->
     <section class="panel">
       <div class="panel-title">🏷️ Tag Performance (Sorted by Profit)</div>
       <div id="tagStats" class="tag-grid"></div>
     </section>
 
-    <!-- Stats -->
     <section class="panel">
       <div class="panel-title">Performance Statistics</div>
       <div class="stats-grid">
-        <div class="stat">
-          <div class="stat-label">Total Trades</div>
-          <div id="totalTrades" class="stat-value">0</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-label">Win Rate</div>
-          <div id="winRate" class="stat-value">0%</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-label">Total P&L (Net)</div>
-          <div id="totalPnl" class="stat-value">$0.00</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-label">Average P&L</div>
-          <div id="avgPnl" class="stat-value">$0.00</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-label">Largest Win</div>
-          <div id="largestWin" class="stat-value">$0.00</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-label">Largest Loss</div>
-          <div id="largestLoss" class="stat-value">$0.00</div>
-        </div>
+        <div class="stat"><div class="stat-label">Total Trades</div><div id="totalTrades" class="stat-value">0</div></div>
+        <div class="stat"><div class="stat-label">Win Rate</div><div id="winRate" class="stat-value">0%</div></div>
+        <div class="stat"><div class="stat-label">Total P&L (Net)</div><div id="totalPnl" class="stat-value">$0.00</div></div>
+        <div class="stat"><div class="stat-label">Average P&L</div><div id="avgPnl" class="stat-value">$0.00</div></div>
+        <div class="stat"><div class="stat-label">Largest Win</div><div id="largestWin" class="stat-value">$0.00</div></div>
+        <div class="stat"><div class="stat-label">Largest Loss</div><div id="largestLoss" class="stat-value">$0.00</div></div>
       </div>
     </section>
 
-    <!-- Trades Table -->
     <section class="panel">
       <div class="panel-title">Trades</div>
 
@@ -98,22 +69,16 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Symbol</th>
-              <th>Side</th>
-              <th>Qty</th>
-              <th>Entry</th>
-              <th>Exit</th>
-              <th>Gross P&L</th>
-              <th>Commission</th>
-              <th>Net P&L</th>
-              <th>Tags</th>
+              <th>Date</th><th>Symbol</th><th>Side</th><th>Qty</th>
+              <th>Entry</th><th>Exit</th><th>Gross P&L</th>
+              <th>Commission</th><th>Net P&L</th><th>Tags</th>
             </tr>
           </thead>
           <tbody id="tradesTbody"></tbody>
         </table>
       </div>
     </section>
+
   </main>
 
   <script src="app.js"></script>
