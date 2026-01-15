@@ -2,16 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Trading Journal</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <h1>Trading Journal</h1>
 
-  <h2>🏷️ Tag Performance (Sorted by Profit)</h2>
-  <div id="tagStats" class="tag-grid"></div>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>Trading Journal</h1>
+    <p class="subtitle">Track trades, analyze performance, and improve results</p>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="container">
+
+    <!-- Upload + Controls -->
+    <section class="panel">
+      <div class="panel-title">Import Trades</div>
+
+      <div class="row gap">
+        <div class="field">
+          <label for="csvInput">Upload CSV</label>
+          <input type="file" id="csvInput" accept=".csv" />
+          <small class="hint">Upload your trade CSV export (supports scale-in / partial exits)</small>
+        </div>
+
+        <div class="field">
+          <label for="commissionInput">Commission per Contract (Round Trip)</label>
+          <input type="number" id="commissionInput" step="0.01" value="1.00" />
+          <small class="hint">$1 = $0.50 entry + $0.50 exit</small>
+        </div>
+
+        <div class="field">
+          <label for="tagFilter">Filter by Tag</label>
+          <select id="tagFilter">
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="clearBtn" class="btn">Clear Trades</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tag Performance -->
+    <section class="panel">
+      <div class="panel-title">🏷️ Tag Performance (Sorted by Profit)</div>
+      <div id="tagStats" class="tag-grid"></div>
+    </section>
+
+    <!-- Stats -->
+    <section class="panel">
+      <div class="panel-title">Performance Statistics</div>
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label">Total Trades</div>
+          <div id="totalTrades" class="stat-value">0</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Win Rate</div>
+          <div id="winRate" class="stat-value">0%</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Total P&L (Net)</div>
+          <div id="totalPnl" class="stat-value">$0.00</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Average P&L</div>
+          <div id="avgPnl" class="stat-value">$0.00</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Largest Win</div>
+          <div id="largestWin" class="stat-value">$0.00</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-label">Largest Loss</div>
+          <div id="largestLoss" class="stat-value">$0.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trades Table -->
+    <section class="panel">
+      <div class="panel-title">Trades</div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Symbol</th>
+              <th>Side</th>
+              <th>Qty</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>Gross P&L</th>
+              <th>Commission</th>
+              <th>Net P&L</th>
+              <th>Tags</th>
+            </tr>
+          </thead>
+          <tbody id="tradesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
   <script src="app.js"></script>
 </body>
 </html>
-
